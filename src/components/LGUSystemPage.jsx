@@ -2,24 +2,27 @@ import { useState, useEffect } from 'react'
 import { ExternalLink, AlertCircle, Award } from 'lucide-react'
 
 const LGUSystemPage = () => {
+  const [showIframe, setShowIframe] = useState(false)
   const [iframeError, setIframeError] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [logoError, setLogoError] = useState(false)
   const lguUrl = 'https://palayancity.golgu.ph/login'
   const logoPath = '/palayan-logo.png' // Path relative to public folder
 
   useEffect(() => {
-    // Reset states when component mounts
-    setIframeError(false)
-    setIsLoading(true)
+    if (showIframe) {
+      setIsLoading(true)
+      setIframeError(false)
+      
+      // Set a timeout to detect if iframe fails to load
+      const loadingTimer = setTimeout(() => {
+        setIsLoading(false)
+        setIframeError(true)
+      }, 5000)
 
-    // Set a timeout to stop loading indicator
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false)
-    }, 3000)
-
-    return () => clearTimeout(loadingTimer)
-  }, [])
+      return () => clearTimeout(loadingTimer)
+    }
+  }, [showIframe])
 
   const handleIframeError = () => {
     setIframeError(true)
@@ -104,60 +107,92 @@ const LGUSystemPage = () => {
 
         {/* Iframe or Error Message */}
         <div className="relative bg-slate-50">
-          {isLoading && !iframeError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lgu-blue border-t-transparent mb-3"></div>
-                <p className="text-sm text-slate-600">Loading system preview...</p>
-              </div>
-            </div>
-          )}
-
-          {!iframeError ? (
-            <div className="relative" style={{ height: '250px', overflow: 'hidden' }}>
-              <iframe
-                src={lguUrl}
-                title="Palayan City LGU System Preview"
-                className="w-full border-0"
-                style={{ 
-                  width: '100%', 
-                  height: '800px', // Tall enough to capture full page
-                  border: 'none',
-                  transform: 'scale(1)',
-                  transformOrigin: 'top left'
-                }}
-                onError={handleIframeError}
-                onLoad={() => setIsLoading(false)}
-                sandbox="allow-same-origin allow-scripts"
-              />
-              {/* Overlay to prevent interaction with iframe */}
-              <div className="absolute inset-0 bg-transparent pointer-events-none"></div>
-            </div>
-          ) : (
+          {!showIframe || iframeError ? (
             <div className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-4">
-                <AlertCircle className="w-8 h-8 text-amber-600" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                <AlertCircle className="w-8 h-8 text-blue-600" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">
-                Preview Not Available
+                External System Access
               </h3>
               <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
-                The external system cannot be embedded due to security restrictions (X-Frame-Options or CSP frame-ancestors). 
-                This is a normal security feature to protect the official website.
+                The Palayan City LGU System is an external secure website. For security reasons, 
+                it cannot be embedded in this preview. Click the button below to access the full system.
               </p>
-              <button
-                onClick={openInNewTab}
-                className="inline-flex items-center gap-2 bg-lgu-blue hover:bg-lgu-navy text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg hover:shadow-xl"
-              >
-                <ExternalLink className="w-5 h-5" />
-                Open Palayan City LGU System
-              </button>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+                <button
+                  onClick={openInNewTab}
+                  className="inline-flex items-center gap-2 bg-lgu-blue hover:bg-lgu-navy text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg hover:shadow-xl"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  Open Palayan City LGU System
+                </button>
+                
+                {!showIframe && !iframeError && (
+                  <button
+                    onClick={() => setShowIframe(true)}
+                    className="inline-flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-6 py-3 rounded-lg transition-all"
+                  >
+                    Try Preview (May Not Work)
+                  </button>
+                )}
+              </div>
+
+              {iframeError && (
+                <div className="text-xs text-slate-500 max-w-md mx-auto">
+                  <p className="mb-2">
+                    <span className="font-semibold">Why can't I see a preview?</span>
+                  </p>
+                  <p>
+                    The external system has security settings (X-Frame-Options or CSP frame-ancestors) 
+                    that prevent embedding for your protection. This is normal and expected for secure government websites.
+                  </p>
+                </div>
+              )}
             </div>
+          ) : (
+            <>
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lgu-blue border-t-transparent mb-3"></div>
+                    <p className="text-sm text-slate-600">Loading system preview...</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="relative" style={{ height: '250px', overflow: 'hidden' }}>
+                <iframe
+                  src={lguUrl}
+                  title="Palayan City LGU System Preview"
+                  className="w-full border-0"
+                  style={{ 
+                    width: '100%', 
+                    height: '800px',
+                    border: 'none',
+                    transform: 'scale(1)',
+                    transformOrigin: 'top left'
+                  }}
+                  onError={handleIframeError}
+                  onLoad={(e) => {
+                    setIsLoading(false)
+                    try {
+                      e.target.contentWindow.location.href
+                    } catch (error) {
+                      setIframeError(true)
+                    }
+                  }}
+                  sandbox="allow-same-origin allow-scripts allow-forms"
+                />
+                <div className="absolute inset-0 bg-transparent pointer-events-none"></div>
+              </div>
+            </>
           )}
         </div>
 
         {/* Info Footer */}
-        {!iframeError && (
+        {showIframe && !iframeError && (
           <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
             <p className="text-xs text-slate-500 flex items-center gap-2">
               <AlertCircle className="w-3 h-3" />

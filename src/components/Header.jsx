@@ -1,111 +1,202 @@
-import { Award, HelpCircle, Calendar, Plus, BarChart3, Users, School, Layers, Database } from 'lucide-react'
+import { Award, HelpCircle, Plus, BarChart3, Users, School, Layers, Database, ExternalLink } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 
 const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
   const { currentSchoolYear, setSchoolYear } = useScholarStore()
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard Overview', icon: BarChart3 },
-    { id: 'lgu-system', label: 'Palayan City LGU System', icon: Award },
-    { id: 'scholars', label: 'Scholar Records', icon: Users },
-    { id: 'schools', label: 'Summary per School', icon: School },
-    { id: 'yearlevel', label: 'Year Level Stats', icon: Layers },
-    { id: 'reports', label: 'Backup & Reports', icon: Database },
+    { id: 'dashboard', label: 'Overview', icon: BarChart3 },
+    { id: 'scholars', label: 'Scholars', icon: Users },
+    { id: 'schools', label: 'Schools', icon: School },
+    { id: 'yearlevel', label: 'Year Levels', icon: Layers },
+    { id: 'reports', label: 'Reports', icon: Database },
   ]
 
+  const handleLGUPortalClick = () => {
+    window.open('https://palayancity.golgu.ph/login', '_blank', 'noopener,noreferrer')
+  }
+
   return (
-    <header className="bg-lgu-navy text-white shadow-lg sticky top-0 z-30 border-b-4 border-lgu-gold no-print">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* Logo & Title */}
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center text-lgu-navy font-black text-xl shadow-inner">
-              <Award className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
-                  Palayan City LGU
-                </h1>
-                <span className="bg-amber-400 text-lgu-navy font-bold text-xs px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Official Portal
-                </span>
+    <header 
+      className="sticky top-0 z-50 no-print"
+      style={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderBottom: '1px solid #E5E5EA'
+      }}
+    >
+      <div className="mx-auto px-6">
+        <div className="flex items-center justify-between h-14">
+          {/* Left: Logo + Title + Tabs */}
+          <div className="flex items-center gap-8">
+            {/* Logo & Brand */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                <Award className="w-5 h-5 text-white" strokeWidth={2} />
               </div>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium flex items-center gap-2">
-                <span>Scholarship Program</span>
-                <span className="text-slate-500">•</span>
-                <span className="text-amber-300 font-semibold">
-                  School Year {currentSchoolYear}
-                </span>
-              </p>
+              <div className="flex flex-col">
+                <h1 className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
+                  Scholarship Program
+                </h1>
+                <p className="text-xs" style={{ color: '#AAAAAA' }}>
+                  SY {currentSchoolYear}
+                </p>
+              </div>
             </div>
+
+            {/* Navigation Tabs */}
+            <nav 
+              className="hidden lg:flex items-center gap-1"
+              aria-label="Main navigation"
+            >
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => onTabChange(tab.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className="relative px-3 h-14 flex items-center gap-2 transition-all duration-150"
+                    style={{
+                      color: isActive ? '#007AFF' : 'rgba(29, 29, 31, 0.6)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.color = '#1D1D1F'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.color = 'rgba(29, 29, 31, 0.6)'
+                      }
+                    }}
+                  >
+                    <Icon className="w-4 h-4" strokeWidth={1.5} />
+                    <span className="text-sm font-medium">{tab.label}</span>
+                    {isActive && (
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: '#007AFF' }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
           </div>
 
-          {/* Controls & Role Selector */}
-          <div className="flex items-center flex-wrap gap-2 sm:gap-3">
-            {/* Help Button */}
+          {/* Right: Controls */}
+          <div className="flex items-center gap-3">
+            {/* School Year Dropdown */}
+            <select
+              id="sy-select"
+              value={currentSchoolYear}
+              onChange={(e) => setSchoolYear(e.target.value)}
+              className="hidden sm:block text-sm px-3 py-1.5 rounded-lg transition-all duration-150 cursor-pointer"
+              style={{
+                color: '#1D1D1F',
+                border: '1px solid #E5E5EA',
+                backgroundColor: '#FFFFFF',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#007AFF'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#E5E5EA'
+              }}
+            >
+              <option value="2025-2026">2025–2026</option>
+              <option value="2026-2027">2026–2027</option>
+              <option value="2027-2028">2027–2028</option>
+            </select>
+
+            {/* Help Icon Button */}
             <button
               onClick={onOpenHelp}
-              className="bg-amber-500 hover:bg-amber-400 text-lgu-navy font-bold text-xs px-3 py-2 rounded-lg transition-all shadow flex items-center gap-1.5"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
+              style={{ color: '#AAAAAA' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#1D1D1F'
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#AAAAAA'
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+              aria-label="Help"
             >
-              <HelpCircle className="w-4 h-4" />
-              <span>How to Use?</span>
+              <HelpCircle className="w-5 h-5" strokeWidth={1.5} />
             </button>
 
-            {/* School Year Selector */}
-            <div className="flex items-center bg-slate-800/80 rounded-lg border border-slate-700 px-3 py-1.5">
-              <Calendar className="w-4 h-4 text-amber-400 mr-2" />
-              <label htmlFor="sy-select" className="text-xs text-slate-300 font-medium mr-2">
-                SY:
-              </label>
-              <select
-                id="sy-select"
-                value={currentSchoolYear}
-                onChange={(e) => setSchoolYear(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer"
-              >
-                <option value="2025-2026" className="text-slate-900">2025–2026</option>
-                <option value="2026-2027" className="text-slate-900">2026–2027</option>
-                <option value="2027-2028" className="text-slate-900">2027–2028</option>
-              </select>
-            </div>
+            {/* LGU Portal Link */}
+            <button
+              onClick={handleLGUPortalClick}
+              className="hidden md:flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-all duration-150"
+              style={{ color: '#1D1D1F' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+            >
+              <span>LGU Portal</span>
+              <ExternalLink className="w-3.5 h-3.5" strokeWidth={2} />
+            </button>
 
             {/* Add Scholar Button */}
             <button
               onClick={onAddScholar}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition-all shadow flex items-center gap-1.5"
+              className="flex items-center gap-2 text-sm font-medium px-4 py-1.5 rounded-lg transition-all duration-150 shadow-sm"
+              style={{
+                backgroundColor: '#007AFF',
+                color: '#FFFFFF',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#0051D5'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#007AFF'
+              }}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" strokeWidth={2} />
               <span className="hidden sm:inline">Add Scholar</span>
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-lgu-blue border-t border-slate-700/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto py-2 text-xs sm:text-sm font-medium">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
-                  className={`px-3 py-2 rounded-md transition flex items-center gap-2 whitespace-nowrap ${
-                    isActive
-                      ? 'text-amber-300 bg-slate-800/90 font-semibold'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              )
-            })}
-          </nav>
-        </div>
+        {/* Mobile Navigation - Horizontal Scroll */}
+        <nav 
+          className="lg:hidden flex items-center gap-1 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide"
+          aria-label="Main navigation"
+        >
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className="relative px-3 py-2 flex items-center gap-2 transition-all duration-150 whitespace-nowrap flex-shrink-0"
+                style={{
+                  color: isActive ? '#007AFF' : 'rgba(29, 29, 31, 0.6)',
+                }}
+              >
+                <Icon className="w-4 h-4" strokeWidth={1.5} />
+                <span className="text-sm font-medium">{tab.label}</span>
+                {isActive && (
+                  <div 
+                    className="absolute bottom-0 left-0 right-0 h-0.5"
+                    style={{ backgroundColor: '#007AFF' }}
+                  />
+                )}
+              </button>
+            )
+          })}
+        </nav>
       </div>
     </header>
   )

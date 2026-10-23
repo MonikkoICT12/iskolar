@@ -46,7 +46,7 @@ function App() {
   }
 
   return (
-    <div className="h-full text-slate-800 flex flex-col font-sans bg-slate-100 min-h-screen">
+    <div className="h-full text-slate-800 flex flex-col font-sans min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}

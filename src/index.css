@@ -71,3 +71,20 @@
 .animate-scale-in {
   animation: scale-in 0.2s ease-out;
 }
+
+/* Hide scrollbar for mobile nav */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Focus ring for accessibility */
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}

@@ -56,15 +56,15 @@ const SchoolSummary = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <h2 className="text-lg font-bold text-slate-900 mb-1">School Breakdown Summary</h2>
-        <p className="text-xs text-slate-500 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5" style={{ border: '1px solid #E5E5EA' }}>
+        <h2 className="text-lg font-bold mb-1" style={{ color: '#1D1D1F' }}>School Breakdown Summary</h2>
+        <p className="text-xs mb-4" style={{ color: '#AAAAAA' }}>
           Detailed view of partner institutions, scholar counts, and monetary allocations.
         </p>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
-            <thead className="bg-slate-100 text-slate-700 font-semibold uppercase text-xs border-b border-slate-200">
+            <thead className="font-semibold uppercase text-xs" style={{ backgroundColor: '#F5F5F7', color: '#1D1D1F' }}>
               <tr>
                 <th className="py-3 px-4">School Institution</th>
                 <th className="py-3 px-4 text-center">Active Scholars</th>
@@ -73,7 +73,7 @@ const SchoolSummary = () => {
                 <th className="py-3 px-4 text-center no-print">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody style={{ borderTop: '1px solid #E5E5EA' }}>
               {schoolStats.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="py-12 text-center text-slate-500">
@@ -85,35 +85,41 @@ const SchoolSummary = () => {
                 </tr>
               ) : (
                 schoolStats.map((stat, index) => (
-                  <tr key={stat.school} className="hover:bg-slate-50">
+                  <tr 
+                    key={stat.school} 
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid #E5E5EA' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-lgu-blue/10 text-lgu-blue flex items-center justify-center font-bold text-xs">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)', color: '#007AFF' }}>
                           {index + 1}
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">{stat.school}</div>
+                          <div className="font-medium" style={{ color: '#1D1D1F' }}>{stat.school}</div>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-lgu-blue/10 text-lgu-blue rounded-full text-xs font-semibold">
-                        <Users className="w-3 h-3" />
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)', color: '#007AFF' }}>
+                        <Users className="w-3 h-3" strokeWidth={1.5} />
                         {pluralizeScholar(stat.count)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-emerald-700">
+                    <td className="py-3 px-4 text-right font-semibold" style={{ color: '#007AFF' }}>
                       {formatCurrency(stat.amount)}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex flex-col items-center">
-                        <span className="font-bold text-slate-900">
+                        <span className="font-bold" style={{ color: '#1D1D1F' }}>
                           {stat.percentage.toFixed(1)}%
                         </span>
-                        <div className="w-16 bg-slate-200 rounded-full h-1.5 mt-1">
+                        <div className="w-16 rounded-full h-1.5 mt-1" style={{ backgroundColor: '#E5E5EA' }}>
                           <div
-                            className="bg-lgu-blue h-full rounded-full"
-                            style={{ width: `${stat.percentage}%` }}
+                            className="h-full rounded-full"
+                            style={{ width: `${stat.percentage}%`, backgroundColor: '#007AFF' }}
                           ></div>
                         </div>
                       </div>
@@ -121,9 +127,12 @@ const SchoolSummary = () => {
                     <td className="py-3 px-4 text-center no-print">
                       <button
                         onClick={() => openSchoolModal(stat.school)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-lgu-blue hover:bg-lgu-navy rounded-lg transition shadow-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition shadow-sm"
+                        style={{ backgroundColor: '#007AFF' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4" strokeWidth={1.5} />
                         View Scholars
                       </button>
                     </td>
@@ -131,11 +140,11 @@ const SchoolSummary = () => {
                 ))
               )}
             </tbody>
-            <tfoot className="bg-slate-50 font-bold text-xs sm:text-sm border-t-2 border-slate-300">
+            <tfoot className="font-bold text-xs sm:text-sm" style={{ backgroundColor: '#F5F5F7', borderTop: '2px solid #E5E5EA' }}>
               <tr>
-                <td className="py-3 px-4 text-slate-800">TOTAL / ALL SCHOOLS</td>
-                <td className="py-3 px-4 text-center text-slate-900">{totalScholars}</td>
-                <td className="py-3 px-4 text-right text-emerald-700">
+                <td className="py-3 px-4" style={{ color: '#1D1D1F' }}>TOTAL / ALL SCHOOLS</td>
+                <td className="py-3 px-4 text-center" style={{ color: '#1D1D1F' }}>{totalScholars}</td>
+                <td className="py-3 px-4 text-right" style={{ color: '#007AFF' }}>
                   {formatCurrency(totalAmount)}
                 </td>
                 <td className="py-3 px-4 text-center">100%</td>

@@ -111,8 +111,8 @@ const LGUSystemPage = () => {
         <div className="relative bg-slate-50">
           {!showIframe || iframeError ? (
             <div className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
-                <AlertCircle className="w-8 h-8 text-blue-600" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
+                <AlertCircle className="w-8 h-8 text-indigo-600" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">
                 External System Access

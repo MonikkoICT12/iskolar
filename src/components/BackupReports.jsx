@@ -68,7 +68,7 @@ const BackupReports = () => {
         </p>
 
         {/* Free Hosting Guide Banner */}
-        <div className="mb-5 bg-gradient-to-r from-blue-900 to-lgu-navy text-white p-4 rounded-xl border border-blue-700 shadow-sm">
+        <div className="mb-5 bg-gradient-to-r from-indigo-900 to-lgu-navy text-white p-4 rounded-xl border border-indigo-700 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="bg-amber-400 text-lgu-navy font-bold text-[10px] px-2 py-0.5 rounded uppercase">
@@ -106,7 +106,7 @@ const BackupReports = () => {
           {/* Export JSON */}
           <button
             onClick={handleExportJSON}
-            className="p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 text-blue-900 flex flex-col items-start gap-2 transition text-left"
+            className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 text-indigo-900 flex flex-col items-start gap-2 transition text-left"
           >
             <Download className="w-5 h-5 text-lgu-blue" />
             <div>

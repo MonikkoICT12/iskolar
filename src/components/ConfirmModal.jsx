@@ -107,10 +107,10 @@ const ConfirmModal = ({
         }
       default:
         return {
-          icon: 'text-blue-600',
-          iconBg: 'bg-blue-100',
-          title: 'text-blue-900',
-          confirmBtn: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+          icon: 'text-indigo-600',
+          iconBg: 'bg-indigo-100',
+          title: 'text-indigo-900',
+          confirmBtn: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
         }
     }
   }

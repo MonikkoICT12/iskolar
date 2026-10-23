@@ -114,17 +114,17 @@ const ScholarRecords = ({ onEditScholar }) => {
     <div className="space-y-5">
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-blue-900">
+              <CheckSquare className="w-5 h-5 text-indigo-600" />
+              <span className="font-semibold text-indigo-900">
                 {selectedIds.length} {selectedIds.length === 1 ? 'scholar' : 'scholars'} selected
               </span>
             </div>
             <button
               onClick={handleClearSelection}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
             >
               <X className="w-3 h-3" />
               Clear selection
@@ -271,14 +271,14 @@ const ScholarRecords = ({ onEditScholar }) => {
                 </tr>
               ) : (
                 filteredScholars.map((scholar) => (
-                  <tr key={scholar.id} className={`hover:bg-slate-50 ${selectedIds.includes(scholar.id) ? 'bg-blue-50' : ''}`}>
+                  <tr key={scholar.id} className={`hover:bg-slate-50 ${selectedIds.includes(scholar.id) ? 'bg-indigo-50' : ''}`}>
                     <td className="py-3 px-4">
                       <button
                         onClick={() => handleSelectOne(scholar.id)}
                         className="flex items-center justify-center w-full"
                       >
                         {selectedIds.includes(scholar.id) ? (
-                          <CheckSquare className="w-4 h-4 text-blue-600" />
+                          <CheckSquare className="w-4 h-4 text-indigo-600" />
                         ) : (
                           <Square className="w-4 h-4 text-slate-400" />
                         )}
@@ -314,7 +314,7 @@ const ScholarRecords = ({ onEditScholar }) => {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => onEditScholar(scholar)}
-                          className="text-blue-600 hover:text-blue-800 p-1"
+                          className="text-indigo-600 hover:text-indigo-800 p-1"
                           title="Edit"
                         >
                           <Edit2 className="w-4 h-4" />

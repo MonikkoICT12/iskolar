@@ -224,7 +224,7 @@ const ScholarModal = ({ scholar, onClose }) => {
                       <div
                         key={index}
                         onClick={() => handleSchoolSelect(school)}
-                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-slate-700 border-b border-slate-100 last:border-b-0"
+                        className="px-3 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-slate-700 border-b border-slate-100 last:border-b-0"
                       >
                         {school}
                       </div>
@@ -335,8 +335,8 @@ const ScholarModal = ({ scholar, onClose }) => {
               )}
               {!isEditing && (
                 <div className="md:col-span-2">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-800">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                    <p className="text-xs text-indigo-800">
                       <span className="font-semibold">Note:</span> New scholars are automatically set to{' '}
                       <span className="font-bold">"Processing"</span> status. You can change this to "Paid" after payment is released.
                     </p>

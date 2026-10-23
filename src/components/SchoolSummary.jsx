@@ -155,15 +155,15 @@ const SchoolSummary = () => {
             <div className="p-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-blue-600 uppercase">Total Scholars</p>
-                      <p className="text-2xl font-bold text-blue-900 mt-1">
+                      <p className="text-xs font-semibold text-indigo-600 uppercase">Total Scholars</p>
+                      <p className="text-2xl font-bold text-indigo-900 mt-1">
                         {getScholarsBySchool(selectedSchool).length}
                       </p>
                     </div>
-                    <Users className="w-8 h-8 text-blue-600" />
+                    <Users className="w-8 h-8 text-indigo-600" />
                   </div>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">

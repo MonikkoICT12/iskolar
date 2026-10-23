@@ -18,7 +18,7 @@ const Toast = () => {
     success: 'bg-emerald-500 text-white',
     error: 'bg-red-500 text-white',
     warning: 'bg-amber-500 text-white',
-    info: 'bg-blue-500 text-white',
+    info: 'bg-indigo-500 text-white',
   }
 
   return (

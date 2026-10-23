@@ -43,7 +43,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                 Encoded Records
               </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-lgu-blue flex items-center justify-center text-xl font-bold">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-lgu-blue flex items-center justify-center text-xl font-bold">
               <Users className="w-6 h-6" />
             </div>
           </div>

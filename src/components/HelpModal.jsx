@@ -45,8 +45,8 @@ const HelpModal = ({ onClose }) => {
           <div>
             <h3 className="text-lg font-bold text-slate-900 mb-3">Key Features</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-sm text-blue-900 mb-1">Auto-Save</h4>
+              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                <h4 className="font-semibold text-sm text-indigo-900 mb-1">Auto-Save</h4>
                 <p className="text-xs text-slate-600">
                   All data is automatically saved to your browser's local storage
                 </p>

@@ -114,17 +114,20 @@ const ScholarRecords = ({ onEditScholar }) => {
     <div className="space-y-5">
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)', border: '1px solid #007AFF' }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-indigo-600" />
-              <span className="font-semibold text-indigo-900">
+              <CheckSquare className="w-5 h-5" style={{ color: '#007AFF' }} strokeWidth={1.5} />
+              <span className="font-semibold" style={{ color: '#1D1D1F' }}>
                 {selectedIds.length} {selectedIds.length === 1 ? 'scholar' : 'scholars'} selected
               </span>
             </div>
             <button
               onClick={handleClearSelection}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+              className="text-xs font-medium flex items-center gap-1 transition-colors"
+              style={{ color: '#007AFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#0051D5'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#007AFF'}
             >
               <X className="w-3 h-3" />
               Clear selection
@@ -132,26 +135,30 @@ const ScholarRecords = ({ onEditScholar }) => {
           </div>
           <button
             onClick={handleBulkMarkAsPaid}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2"
+            className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
+            style={{ backgroundColor: '#007AFF' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
           >
-            <CheckSquare className="w-4 h-4" />
+            <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
             Mark as Paid
           </button>
         </div>
       )}
 
       {/* Search and Filter Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <div className="bg-white rounded-xl shadow-sm p-4" style={{ border: '1px solid #E5E5EA' }}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Search Input */}
           <div className="relative flex-grow max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search scholar name, course, school, or barangay..."
-              className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lgu-blue"
+              className="w-full pl-9 pr-4 py-2 rounded-lg text-sm"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             />
           </div>
 
@@ -160,7 +167,8 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterBarangay}
               onChange={(e) => setFilterBarangay(e.target.value)}
-              className="border border-slate-300 rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-lgu-blue"
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Barangays</option>
               {BARANGAYS.map((brgy) => (
@@ -173,7 +181,8 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterSchool}
               onChange={(e) => setFilterSchool(e.target.value)}
-              className="border border-slate-300 rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-lgu-blue"
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Schools</option>
               {schools.map((school) => (
@@ -186,7 +195,8 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
-              className="border border-slate-300 rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-lgu-blue"
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Year Levels</option>
               {YEAR_LEVELS.map((level) => (
@@ -199,7 +209,8 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterSemester}
               onChange={(e) => setFilterSemester(e.target.value)}
-              className="border border-slate-300 rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-lgu-blue"
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Semesters</option>
               {SEMESTERS.map((sem) => (
@@ -212,7 +223,8 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="border border-slate-300 rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-lgu-blue"
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Status</option>
               <option value="Processing">Processing</option>
@@ -223,10 +235,10 @@ const ScholarRecords = ({ onEditScholar }) => {
       </div>
 
       {/* Main Scholar Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: '1px solid #E5E5EA' }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-800 text-white font-semibold text-xs uppercase tracking-wider">
+            <thead className="font-semibold text-xs uppercase tracking-wider" style={{ backgroundColor: '#F5F5F7', color: '#1D1D1F' }}>
               <tr>
                 <th className="py-3 px-4 w-12">
                   <button
@@ -235,11 +247,11 @@ const ScholarRecords = ({ onEditScholar }) => {
                     title={allSelected ? "Deselect all" : "Select all"}
                   >
                     {isIndeterminate ? (
-                      <MinusSquare className="w-4 h-4 text-amber-400" />
+                      <MinusSquare className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
                     ) : allSelected ? (
-                      <CheckSquare className="w-4 h-4 text-emerald-400" />
+                      <CheckSquare className="w-4 h-4" style={{ color: '#007AFF' }} strokeWidth={1.5} />
                     ) : (
-                      <Square className="w-4 h-4" />
+                      <Square className="w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
                     )}
                   </button>
                 </th>
@@ -249,12 +261,12 @@ const ScholarRecords = ({ onEditScholar }) => {
                 <th className="py-3 px-4">Year Level</th>
                 <th className="py-3 px-4">Semester</th>
                 <th className="py-3 px-4">Course / Program</th>
-                <th className="py-3 px-4 text-right">Amount (₱)</th>
+                <th className="py-3 px-4 text-right">Amount</th>
                 <th className="py-3 px-4 text-center">Status</th>
                 <th className="py-3 px-4 text-center no-print">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
+            <tbody className="text-xs sm:text-sm" style={{ borderTop: '1px solid #E5E5EA' }}>
               {filteredScholars.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="py-12 text-center text-slate-500">
@@ -271,39 +283,56 @@ const ScholarRecords = ({ onEditScholar }) => {
                 </tr>
               ) : (
                 filteredScholars.map((scholar) => (
-                  <tr key={scholar.id} className={`hover:bg-slate-50 ${selectedIds.includes(scholar.id) ? 'bg-indigo-50' : ''}`}>
+                  <tr 
+                    key={scholar.id} 
+                    className={`transition-colors`}
+                    style={{ 
+                      borderBottom: '1px solid #E5E5EA',
+                      backgroundColor: selectedIds.includes(scholar.id) ? 'rgba(0, 122, 255, 0.1)' : 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selectedIds.includes(scholar.id)) {
+                        e.currentTarget.style.backgroundColor = '#F5F5F7'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!selectedIds.includes(scholar.id)) {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }
+                    }}
+                  >
                     <td className="py-3 px-4">
                       <button
                         onClick={() => handleSelectOne(scholar.id)}
                         className="flex items-center justify-center w-full"
                       >
                         {selectedIds.includes(scholar.id) ? (
-                          <CheckSquare className="w-4 h-4 text-indigo-600" />
+                          <CheckSquare className="w-4 h-4" style={{ color: '#007AFF' }} strokeWidth={1.5} />
                         ) : (
-                          <Square className="w-4 h-4 text-slate-400" />
+                          <Square className="w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
                         )}
                       </button>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900">
+                      <div className="font-semibold" style={{ color: '#1D1D1F' }}>
                         {scholar.lastName}, {scholar.firstName} {scholar.middleName}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{scholar.barangay}</td>
-                    <td className="py-3 px-4 text-slate-600 text-xs max-w-xs truncate">
+                    <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.barangay}</td>
+                    <td className="py-3 px-4 text-xs max-w-xs truncate" style={{ color: '#AAAAAA' }}>
                       {scholar.school}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{scholar.yearLevel}</td>
-                    <td className="py-3 px-4 text-slate-600">
-                      <span className="text-xs font-medium">{scholar.semester || '1st Sem'}</span>
+                    <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.yearLevel}</td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs font-medium" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</span>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 text-xs">{scholar.course || '-'}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-emerald-700">
+                    <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
+                    <td className="py-3 px-4 text-right font-semibold" style={{ color: '#007AFF' }}>
                       {formatCurrency(scholar.amount)}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span
-                        className={`text-xs font-semibold px-2 py-1 rounded ${getStatusBadge(
+                        className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusBadge(
                           scholar.status
                         )}`}
                       >
@@ -314,17 +343,23 @@ const ScholarRecords = ({ onEditScholar }) => {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => onEditScholar(scholar)}
-                          className="text-indigo-600 hover:text-indigo-800 p-1"
+                          className="p-1 transition-colors"
+                          style={{ color: '#007AFF' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#0051D5'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#007AFF'}
                           title="Edit"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                         <button
                           onClick={() => handleDelete(scholar)}
-                          className="text-red-600 hover:text-red-800 p-1"
+                          className="p-1 transition-colors"
+                          style={{ color: '#FF3B30' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#C62828'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#FF3B30'}
                           title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                       </div>
                     </td>
@@ -336,15 +371,15 @@ const ScholarRecords = ({ onEditScholar }) => {
         </div>
 
         {/* Table Footer Stats */}
-        <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <div>
+        <div className="px-4 py-3 flex flex-col sm:flex-row items-center justify-between text-xs gap-2" style={{ backgroundColor: '#F5F5F7', borderTop: '1px solid #E5E5EA' }}>
+          <div style={{ color: '#AAAAAA' }}>
             Showing{' '}
-            <span className="font-bold text-slate-800">{filteredScholars.length}</span> out of{' '}
-            <span className="font-bold text-slate-800">{allScholars.length}</span> records
+            <span className="font-bold" style={{ color: '#1D1D1F' }}>{filteredScholars.length}</span> out of{' '}
+            <span className="font-bold" style={{ color: '#1D1D1F' }}>{allScholars.length}</span> records
           </div>
-          <div className="font-semibold text-slate-700">
+          <div className="font-semibold" style={{ color: '#1D1D1F' }}>
             Filtered Total Amount:{' '}
-            <span className="text-emerald-700 font-bold text-sm">
+            <span className="font-bold text-sm" style={{ color: '#007AFF' }}>
               {formatCurrency(totalFiltered)}
             </span>
           </div>

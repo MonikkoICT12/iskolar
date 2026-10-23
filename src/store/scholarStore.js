@@ -46,6 +46,16 @@ const useScholarStore = create(
         get().showToast('Scholar updated successfully!', 'success')
       },
 
+      bulkUpdateScholars: (ids, updates) => {
+        set((state) => ({
+          scholars: state.scholars.map((s) =>
+            ids.includes(s.id) ? { ...s, ...updates } : s
+          ),
+        }))
+        const count = ids.length
+        get().showToast(`${count} scholar${count === 1 ? '' : 's'} updated successfully!`, 'success')
+      },
+
       deleteScholar: (id) => {
         set((state) => ({
           scholars: state.scholars.filter((s) => s.id !== id),

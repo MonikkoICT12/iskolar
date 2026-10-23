@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { Search, Edit2, Trash2, Eye, UserPlus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Edit2, Trash2, Eye, UserPlus, CheckSquare, Square, MinusSquare, X } from 'lucide-react'
 import useScholarStore, { BARANGAYS, YEAR_LEVELS, SEMESTERS } from '../store/scholarStore'
 import ConfirmModal from './ConfirmModal'
 
 const ScholarRecords = ({ onEditScholar }) => {
-  const { getScholarsBySchoolYear, getSchoolsList, deleteScholar } = useScholarStore()
+  const { getScholarsBySchoolYear, getSchoolsList, deleteScholar, bulkUpdateScholars } = useScholarStore()
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterBarangay, setFilterBarangay] = useState('ALL')
@@ -13,6 +13,8 @@ const ScholarRecords = ({ onEditScholar }) => {
   const [filterSemester, setFilterSemester] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scholar: null })
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkPaidConfirm, setBulkPaidConfirm] = useState(false)
 
   const allScholars = getScholarsBySchoolYear()
   const schools = getSchoolsList()
@@ -33,6 +35,49 @@ const ScholarRecords = ({ onEditScholar }) => {
 
     return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus
   })
+
+  // Reset selection when filters or search changes
+  useEffect(() => {
+    setSelectedIds([])
+  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus])
+
+  // Selection handlers
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredScholars.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredScholars.map(s => s.id))
+    }
+  }
+
+  const handleSelectOne = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) 
+        ? prev.filter(selectedId => selectedId !== id)
+        : [...prev, id]
+    )
+  }
+
+  const handleClearSelection = () => {
+    setSelectedIds([])
+  }
+
+  const handleBulkMarkAsPaid = () => {
+    if (selectedIds.length > 0) {
+      setBulkPaidConfirm(true)
+    }
+  }
+
+  const confirmBulkPaid = () => {
+    bulkUpdateScholars(selectedIds, { status: 'Paid' })
+    setSelectedIds([])
+    setBulkPaidConfirm(false)
+  }
+
+  // Checkbox states
+  const allSelected = filteredScholars.length > 0 && selectedIds.length === filteredScholars.length
+  const someSelected = selectedIds.length > 0 && selectedIds.length < filteredScholars.length
+  const isIndeterminate = someSelected && !allSelected
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
@@ -67,6 +112,34 @@ const ScholarRecords = ({ onEditScholar }) => {
 
   return (
     <div className="space-y-5">
+      {/* Bulk Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold text-blue-900">
+                {selectedIds.length} {selectedIds.length === 1 ? 'scholar' : 'scholars'} selected
+              </span>
+            </div>
+            <button
+              onClick={handleClearSelection}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+            >
+              <X className="w-3 h-3" />
+              Clear selection
+            </button>
+          </div>
+          <button
+            onClick={handleBulkMarkAsPaid}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2"
+          >
+            <CheckSquare className="w-4 h-4" />
+            Mark as Paid
+          </button>
+        </div>
+      )}
+
       {/* Search and Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -155,6 +228,21 @@ const ScholarRecords = ({ onEditScholar }) => {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-800 text-white font-semibold text-xs uppercase tracking-wider">
               <tr>
+                <th className="py-3 px-4 w-12">
+                  <button
+                    onClick={handleSelectAll}
+                    className="flex items-center justify-center w-full"
+                    title={allSelected ? "Deselect all" : "Select all"}
+                  >
+                    {isIndeterminate ? (
+                      <MinusSquare className="w-4 h-4 text-amber-400" />
+                    ) : allSelected ? (
+                      <CheckSquare className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-3 px-4">Scholar Name</th>
                 <th className="py-3 px-4">Barangay</th>
                 <th className="py-3 px-4">School</th>
@@ -169,7 +257,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
               {filteredScholars.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-12 text-center text-slate-500">
+                  <td colSpan="10" className="py-12 text-center text-slate-500">
                     {allScholars.length === 0 ? (
                       <div className="flex flex-col items-center gap-2">
                         <UserPlus className="w-12 h-12 text-slate-300" />
@@ -183,7 +271,19 @@ const ScholarRecords = ({ onEditScholar }) => {
                 </tr>
               ) : (
                 filteredScholars.map((scholar) => (
-                  <tr key={scholar.id} className="hover:bg-slate-50">
+                  <tr key={scholar.id} className={`hover:bg-slate-50 ${selectedIds.includes(scholar.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => handleSelectOne(scholar.id)}
+                        className="flex items-center justify-center w-full"
+                      >
+                        {selectedIds.includes(scholar.id) ? (
+                          <CheckSquare className="w-4 h-4 text-blue-600" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
+                    </td>
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">
                         {scholar.lastName}, {scholar.firstName} {scholar.middleName}
@@ -262,6 +362,18 @@ const ScholarRecords = ({ onEditScholar }) => {
         confirmText="Delete"
         cancelText="Cancel"
         type="danger"
+      />
+
+      {/* Bulk Paid Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bulkPaidConfirm}
+        onClose={() => setBulkPaidConfirm(false)}
+        onConfirm={confirmBulkPaid}
+        title="Mark as Paid?"
+        message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Paid?`}
+        confirmText="Mark as Paid"
+        cancelText="Cancel"
+        type="success"
       />
     </div>
   )

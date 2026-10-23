@@ -98,6 +98,13 @@ const ConfirmModal = ({
           title: 'text-amber-900',
           confirmBtn: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
         }
+      case 'success':
+        return {
+          icon: 'text-emerald-600',
+          iconBg: 'bg-emerald-100',
+          title: 'text-emerald-900',
+          confirmBtn: 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
+        }
       default:
         return {
           icon: 'text-blue-600',

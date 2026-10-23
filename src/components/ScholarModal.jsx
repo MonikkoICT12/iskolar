@@ -40,7 +40,15 @@ const ScholarModal = ({ scholar, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    
+    // Apply input mask for name fields (letters, spaces, hyphens, apostrophes only)
+    if (name === 'firstName' || name === 'lastName' || name === 'middleName') {
+      // Remove any characters that are not letters, spaces, hyphens, or apostrophes
+      const sanitizedValue = value.replace(/[^a-zA-Z\s\-']/g, '')
+      setFormData((prev) => ({ ...prev, [name]: sanitizedValue }))
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleSchoolInputChange = (e) => {
@@ -125,6 +133,8 @@ const ScholarModal = ({ scholar, onClose }) => {
                   onChange={handleChange}
                   required
                   autoFocus
+                  placeholder="Enter first name"
+                  title="Only letters, spaces, hyphens, and apostrophes allowed"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lgu-blue"
                 />
               </div>
@@ -138,6 +148,8 @@ const ScholarModal = ({ scholar, onClose }) => {
                   value={formData.lastName}
                   onChange={handleChange}
                   required
+                  placeholder="Enter last name"
+                  title="Only letters, spaces, hyphens, and apostrophes allowed"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lgu-blue"
                 />
               </div>
@@ -150,9 +162,17 @@ const ScholarModal = ({ scholar, onClose }) => {
                   name="middleName"
                   value={formData.middleName}
                   onChange={handleChange}
+                  placeholder="Enter middle name"
+                  title="Only letters, spaces, hyphens, and apostrophes allowed"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lgu-blue"
                 />
               </div>
+            </div>
+
+            <div className="mt-2">
+              <p className="text-xs text-slate-500 italic">
+                ℹ️ Name fields accept only letters, spaces, hyphens (-), and apostrophes (')
+              </p>
             </div>
 
             <div className="grid grid-cols-1 mt-4">

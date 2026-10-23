@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { School, Users, DollarSign, Eye, X } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { pluralizeScholar, formatCurrency } from '../utils/helpers'
@@ -17,6 +18,23 @@ const SchoolSummary = () => {
   // Reset to page 1 when switching schools
   useEffect(() => {
     setCurrentPage(1)
+  }, [selectedSchool])
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (selectedSchool) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
   }, [selectedSchool])
 
   const openSchoolModal = (school) => {
@@ -129,25 +147,47 @@ const SchoolSummary = () => {
       </div>
 
       {/* School Scholars Modal */}
-      {selectedSchool && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+      {selectedSchool && createPortal(
+        <div 
+          className="fixed z-[100]" 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeSchoolModal()
+          }}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="sticky top-0 bg-lgu-navy text-white px-6 py-4 flex items-center justify-between rounded-t-xl border-b-4 border-lgu-gold">
+            <div className="sticky top-0 bg-white px-6 py-4 flex items-center justify-between border-b z-10" style={{ borderColor: '#E5E5EA' }}>
               <div>
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <School className="w-6 h-6" />
+                <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: '#1D1D1F' }}>
+                  <School className="w-6 h-6" style={{ color: '#007AFF' }} strokeWidth={1.5} />
                   {selectedSchool}
                 </h2>
-                <p className="text-sm text-slate-300 mt-1">
+                <p className="text-sm mt-1" style={{ color: '#AAAAAA' }}>
                   {getScholarsBySchool(selectedSchool).length} scholars enrolled in this institution
                 </p>
               </div>
               <button
                 onClick={closeSchoolModal}
-                className="text-white hover:text-amber-300 transition p-2 hover:bg-white/10 rounded-lg"
+                className="transition p-2 hover:bg-slate-100 rounded-lg"
+                style={{ color: '#AAAAAA' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#1D1D1F'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#AAAAAA'}
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6" strokeWidth={1.5} />
               </button>
             </div>
 
@@ -155,22 +195,22 @@ const SchoolSummary = () => {
             <div className="p-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                <div className="rounded-lg p-4" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-indigo-600 uppercase">Total Scholars</p>
-                      <p className="text-2xl font-bold text-indigo-900 mt-1">
+                      <p className="text-xs font-semibold uppercase" style={{ color: '#AAAAAA' }}>Total Scholars</p>
+                      <p className="text-2xl font-bold mt-1" style={{ color: '#1D1D1F' }}>
                         {getScholarsBySchool(selectedSchool).length}
                       </p>
                     </div>
-                    <Users className="w-8 h-8 text-indigo-600" />
+                    <Users className="w-8 h-8" style={{ color: '#007AFF' }} strokeWidth={1.5} />
                   </div>
                 </div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                <div className="rounded-lg p-4" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-emerald-600 uppercase">Total Amount</p>
-                      <p className="text-2xl font-bold text-emerald-900 mt-1">
+                      <p className="text-xs font-semibold uppercase" style={{ color: '#AAAAAA' }}>Total Amount</p>
+                      <p className="text-2xl font-bold mt-1" style={{ color: '#007AFF' }}>
                         {formatCurrency(
                           getScholarsBySchool(selectedSchool).reduce(
                             (sum, s) => sum + (parseFloat(s.amount) || 0),
@@ -179,14 +219,14 @@ const SchoolSummary = () => {
                         )}
                       </p>
                     </div>
-                    <DollarSign className="w-8 h-8 text-emerald-600" />
+                    <DollarSign className="w-8 h-8" style={{ color: '#007AFF' }} strokeWidth={1.5} />
                   </div>
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="rounded-lg p-4" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-amber-600 uppercase">Avg per Scholar</p>
-                      <p className="text-2xl font-bold text-amber-900 mt-1">
+                      <p className="text-xs font-semibold uppercase" style={{ color: '#AAAAAA' }}>Avg per Scholar</p>
+                      <p className="text-2xl font-bold mt-1" style={{ color: '#1D1D1F' }}>
                         {formatCurrency(
                           getScholarsBySchool(selectedSchool).reduce(
                             (sum, s) => sum + (parseFloat(s.amount) || 0),
@@ -195,27 +235,27 @@ const SchoolSummary = () => {
                         )}
                       </p>
                     </div>
-                    <School className="w-8 h-8 text-amber-600" />
+                    <School className="w-8 h-8" style={{ color: '#007AFF' }} strokeWidth={1.5} />
                   </div>
                 </div>
               </div>
 
               {/* Scholars Table */}
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+              <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E5E5EA' }}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm border-collapse">
-                    <thead className="bg-slate-800 text-white font-semibold text-xs uppercase">
+                    <thead className="font-semibold text-xs uppercase" style={{ backgroundColor: '#F5F5F7', color: '#1D1D1F' }}>
                       <tr>
                         <th className="py-3 px-4">Scholar Name</th>
                         <th className="py-3 px-4">Barangay</th>
                         <th className="py-3 px-4">Year Level</th>
                         <th className="py-3 px-4">Semester</th>
                         <th className="py-3 px-4">Course / Program</th>
-                        <th className="py-3 px-4 text-right">Amount (₱)</th>
+                        <th className="py-3 px-4 text-right">Amount</th>
                         <th className="py-3 px-4 text-center">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody style={{ borderTop: '1px solid #E5E5EA' }}>
                       {(() => {
                         const allScholars = getScholarsBySchool(selectedSchool)
                         const totalPages = Math.ceil(allScholars.length / itemsPerPage)
@@ -226,22 +266,28 @@ const SchoolSummary = () => {
                         return (
                           <>
                             {paginatedScholars.map((scholar, index) => (
-                              <tr key={scholar.id} className="hover:bg-slate-50">
+                              <tr 
+                                key={scholar.id} 
+                                className="transition-colors"
+                                style={{ borderBottom: '1px solid #E5E5EA' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
                                 <td className="py-3 px-4">
-                                  <div className="font-semibold text-slate-900">
+                                  <div className="font-semibold" style={{ color: '#1D1D1F' }}>
                                     {startIndex + index + 1}. {scholar.lastName}, {scholar.firstName} {scholar.middleName}
                                   </div>
                                 </td>
-                                <td className="py-3 px-4 text-slate-600">{scholar.barangay}</td>
-                                <td className="py-3 px-4 text-slate-600">{scholar.yearLevel}</td>
-                                <td className="py-3 px-4 text-slate-600">{scholar.semester || '1st Sem'}</td>
-                                <td className="py-3 px-4 text-slate-600 text-xs">{scholar.course || '-'}</td>
-                                <td className="py-3 px-4 text-right font-semibold text-emerald-700">
+                                <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.barangay}</td>
+                                <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.yearLevel}</td>
+                                <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</td>
+                                <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
+                                <td className="py-3 px-4 text-right font-semibold" style={{ color: '#007AFF' }}>
                                   {formatCurrency(scholar.amount)}
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <span
-                                    className={`text-xs font-semibold px-2 py-1 rounded ${getStatusBadge(
+                                    className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusBadge(
                                       scholar.status
                                     )}`}
                                   >
@@ -271,19 +317,27 @@ const SchoolSummary = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-slate-50 px-6 py-4 flex items-center justify-between border-t rounded-b-xl">
-              <p className="text-xs text-slate-500">
+            <div className="px-6 py-4 flex items-center justify-between border-t" style={{ backgroundColor: '#F5F5F7', borderColor: '#E5E5EA' }}>
+              <p className="text-xs" style={{ color: '#AAAAAA' }}>
                 Showing {getScholarsBySchool(selectedSchool).length} scholar(s) from {selectedSchool}
               </p>
               <button
                 onClick={closeSchoolModal}
-                className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-200 hover:bg-slate-300 rounded-lg transition"
+                className="px-4 py-2 text-sm font-semibold rounded-lg transition"
+                style={{ 
+                  color: '#1D1D1F',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E5E5EA'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
               >
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { AlertTriangle, X } from 'lucide-react'
 
 const ConfirmModal = ({ 
@@ -20,14 +21,18 @@ const ConfirmModal = ({
       // Focus the cancel button when modal opens
       cancelButtonRef.current?.focus()
       
-      // Prevent body scroll
+      // Prevent body scroll and prevent layout shift
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
       document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = `${scrollbarWidth}px`
     } else {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
     }
 
     return () => {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
     }
   }, [isOpen])
 
@@ -117,9 +122,20 @@ const ConfirmModal = ({
 
   const styles = getTypeStyles()
 
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed z-[100]"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100dvh',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -191,7 +207,8 @@ const ConfirmModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

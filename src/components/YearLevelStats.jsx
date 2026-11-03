@@ -1,4 +1,4 @@
-import { TrendingUp, Users, DollarSign } from 'lucide-react'
+import { TrendingUp, Users } from 'lucide-react'
 import useScholarStore, { YEAR_LEVELS } from '../store/scholarStore'
 import { YEAR_LEVEL_COLORS, formatCurrency } from '../utils/helpers'
 
@@ -21,17 +21,18 @@ const YearLevelStats = () => {
           return (
             <div
               key={level}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition"
+              className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition"
+              style={{ border: '1px solid #E5E5EA' }}
             >
               <div className="flex items-center justify-between mb-2">
-                <TrendingUp className={`w-5 h-5 ${colorConfig.text}`} />
-                <span className="text-2xl font-bold text-slate-900">{stats.count}</span>
+                <TrendingUp className={`w-5 h-5 ${colorConfig.text}`} strokeWidth={1.5} />
+                <span className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>{stats.count}</span>
               </div>
-              <h3 className="text-xs font-semibold text-slate-700 mb-1">{level}</h3>
-              <p className="text-xs text-emerald-600 font-medium">
+              <h3 className="text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>{level}</h3>
+              <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
                 {formatCurrency(stats.amount)}
               </p>
-              <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5">
+              <div className="mt-2 w-full rounded-full h-1.5" style={{ backgroundColor: '#E5E5EA' }}>
                 <div
                   className={`${colorConfig.bg} h-full rounded-full transition-all`}
                   style={{ width: `${percentage}%` }}
@@ -43,11 +44,11 @@ const YearLevelStats = () => {
       </div>
 
       {/* Detailed Analytics */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-base font-bold text-slate-900 mb-1">
+      <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1D1D1F' }}>
           Comparative Year Level Analytics
         </h3>
-        <p className="text-xs text-slate-500 mb-6">
+        <p className="text-xs mb-6" style={{ color: '#AAAAAA' }}>
           Percentage and scholar counts grouped by academic level.
         </p>
 
@@ -65,24 +66,23 @@ const YearLevelStats = () => {
                     <div
                       className={`w-3 h-3 rounded-full ${colorConfig.bg}`}
                     ></div>
-                    <span className="font-semibold text-slate-900">{level}</span>
+                    <span className="font-semibold" style={{ color: '#1D1D1F' }}>{level}</span>
                   </div>
                   <div className="flex items-center gap-6 text-xs">
                     <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3 text-slate-500" />
-                      <span className="font-bold text-slate-900">{stats.count}</span>
-                      <span className="text-slate-500">({percentage.toFixed(1)}%)</span>
+                      <Users className="w-3 h-3" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
+                      <span className="font-bold" style={{ color: '#1D1D1F' }}>{stats.count}</span>
+                      <span style={{ color: '#AAAAAA' }}>({percentage.toFixed(1)}%)</span>
                     </span>
                     <span className="flex items-center gap-1">
-                      <DollarSign className="w-3 h-3 text-emerald-600" />
-                      <span className="font-bold text-emerald-700">
+                      <span className="font-bold" style={{ color: '#007AFF' }}>
                         {formatCurrency(stats.amount)}
                       </span>
-                      <span className="text-slate-500">({amountPercentage.toFixed(1)}%)</span>
+                      <span style={{ color: '#AAAAAA' }}>({amountPercentage.toFixed(1)}%)</span>
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div className="w-full rounded-full h-3 overflow-hidden" style={{ backgroundColor: '#E5E5EA' }}>
                   <div
                     className={`${colorConfig.bg} h-full rounded-full transition-all flex items-center justify-end pr-2`}
                     style={{ width: `${percentage}%` }}

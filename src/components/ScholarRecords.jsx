@@ -327,7 +327,7 @@ const ScholarRecords = ({ onEditScholar }) => {
                       <span className="text-xs font-medium" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</span>
                     </td>
                     <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
-                    <td className="py-3 px-4 text-right font-semibold" style={{ color: '#007AFF' }}>
+                    <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981' }}>
                       {formatCurrency(scholar.amount)}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -379,7 +379,7 @@ const ScholarRecords = ({ onEditScholar }) => {
           </div>
           <div className="font-semibold" style={{ color: '#1D1D1F' }}>
             Filtered Total Amount:{' '}
-            <span className="font-bold text-sm" style={{ color: '#007AFF' }}>
+            <span className="font-bold text-sm" style={{ color: '#10b981' }}>
               {formatCurrency(totalFiltered)}
             </span>
           </div>

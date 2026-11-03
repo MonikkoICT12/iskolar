@@ -197,7 +197,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                           {scholar.yearLevel}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-emerald-600">
+                      <td className="py-3 px-4 text-right font-bold" style={{ color: '#10b981' }}>
                         {formatCurrency(scholar.amount)}
                       </td>
                     </tr>
@@ -292,7 +292,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                 <div className="space-y-2">
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-slate-500 font-medium">Amount:</span>
-                    <p className="text-base text-emerald-600 font-black">
+                    <p className="text-base font-black" style={{ color: '#10b981' }}>
                       {formatCurrency(stat.amount)}
                     </p>
                   </div>

@@ -108,7 +108,7 @@ const SchoolSummary = () => {
                         {pluralizeScholar(stat.count)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold" style={{ color: '#007AFF' }}>
+                    <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981' }}>
                       {formatCurrency(stat.amount)}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -144,7 +144,7 @@ const SchoolSummary = () => {
               <tr>
                 <td className="py-3 px-4" style={{ color: '#1D1D1F' }}>TOTAL / ALL SCHOOLS</td>
                 <td className="py-3 px-4 text-center" style={{ color: '#1D1D1F' }}>{totalScholars}</td>
-                <td className="py-3 px-4 text-right" style={{ color: '#007AFF' }}>
+                <td className="py-3 px-4 text-right" style={{ color: '#10b981' }}>
                   {formatCurrency(totalAmount)}
                 </td>
                 <td className="py-3 px-4 text-center">100%</td>
@@ -219,7 +219,7 @@ const SchoolSummary = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase" style={{ color: '#AAAAAA' }}>Total Amount</p>
-                      <p className="text-2xl font-bold mt-1" style={{ color: '#007AFF' }}>
+                      <p className="text-2xl font-bold mt-1" style={{ color: '#10b981' }}>
                         {formatCurrency(
                           getScholarsBySchool(selectedSchool).reduce(
                             (sum, s) => sum + (parseFloat(s.amount) || 0),
@@ -291,7 +291,7 @@ const SchoolSummary = () => {
                                 <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.yearLevel}</td>
                                 <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</td>
                                 <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
-                                <td className="py-3 px-4 text-right font-semibold" style={{ color: '#007AFF' }}>
+                                <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981' }}>
                                   {formatCurrency(scholar.amount)}
                                 </td>
                                 <td className="py-3 px-4 text-center">

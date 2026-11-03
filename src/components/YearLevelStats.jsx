@@ -29,7 +29,7 @@ const YearLevelStats = () => {
                 <span className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>{stats.count}</span>
               </div>
               <h3 className="text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>{level}</h3>
-              <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
+              <p className="text-xs font-medium" style={{ color: '#10b981' }}>
                 {formatCurrency(stats.amount)}
               </p>
               <div className="mt-2 w-full rounded-full h-1.5" style={{ backgroundColor: '#E5E5EA' }}>
@@ -75,7 +75,7 @@ const YearLevelStats = () => {
                       <span style={{ color: '#AAAAAA' }}>({percentage.toFixed(1)}%)</span>
                     </span>
                     <span className="flex items-center gap-1">
-                      <span className="font-bold" style={{ color: '#007AFF' }}>
+                      <span className="font-bold" style={{ color: '#10b981' }}>
                         {formatCurrency(stats.amount)}
                       </span>
                       <span style={{ color: '#AAAAAA' }}>({amountPercentage.toFixed(1)}%)</span>

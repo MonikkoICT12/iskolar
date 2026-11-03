@@ -23,6 +23,7 @@ const ScholarRecords = ({ onEditScholar }) => {
     const matchesSearch =
       searchTerm === '' ||
       `${scholar.firstName} ${scholar.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      scholar.schoolId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       scholar.course?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       scholar.school?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       scholar.barangay?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -156,7 +157,7 @@ const ScholarRecords = ({ onEditScholar }) => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search scholar name, course, school, or barangay..."
+              placeholder="Search name, School ID, course, school, or barangay..."
               className="w-full pl-9 pr-4 py-2 rounded-lg text-sm"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             />
@@ -256,6 +257,7 @@ const ScholarRecords = ({ onEditScholar }) => {
                   </button>
                 </th>
                 <th className="py-3 px-4">Scholar Name</th>
+                <th className="py-3 px-4">School ID</th>
                 <th className="py-3 px-4">Barangay</th>
                 <th className="py-3 px-4">School</th>
                 <th className="py-3 px-4">Year Level</th>
@@ -269,7 +271,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <tbody className="text-xs sm:text-sm" style={{ borderTop: '1px solid #E5E5EA' }}>
               {filteredScholars.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-slate-500">
+                  <td colSpan="11" className="py-12 text-center text-slate-500">
                     {allScholars.length === 0 ? (
                       <div className="flex flex-col items-center gap-2">
                         <UserPlus className="w-12 h-12 text-slate-300" />
@@ -317,6 +319,17 @@ const ScholarRecords = ({ onEditScholar }) => {
                       <div className="font-semibold" style={{ color: '#1D1D1F' }}>
                         {scholar.lastName}, {scholar.firstName} {scholar.middleName}
                       </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {scholar.schoolId ? (
+                        <span className="text-xs font-medium" style={{ color: '#AAAAAA' }}>
+                          {scholar.schoolId}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-red-100 text-red-700">
+                          Missing ID
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.barangay}</td>
                     <td className="py-3 px-4 text-xs max-w-xs truncate" style={{ color: '#AAAAAA' }}>

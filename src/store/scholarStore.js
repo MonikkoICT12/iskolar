@@ -24,6 +24,17 @@ const useScholarStore = create(
 
       // Scholar CRUD operations
       addScholar: (scholar) => {
+        // Validate School ID uniqueness (case-insensitive)
+        if (scholar.schoolId) {
+          const existingScholar = get().scholars.find(
+            s => s.schoolId?.toLowerCase() === scholar.schoolId.toLowerCase()
+          )
+          if (existingScholar) {
+            get().showToast('School ID already exists. Must be unique.', 'error')
+            return false
+          }
+        }
+
         const newScholar = {
           ...scholar,
           id: Date.now().toString(),
@@ -35,15 +46,28 @@ const useScholarStore = create(
           scholars: [...state.scholars, newScholar],
         }))
         get().showToast('Scholar added successfully!', 'success')
+        return true
       },
 
       updateScholar: (id, updates) => {
+        // Validate School ID uniqueness when updating (case-insensitive)
+        if (updates.schoolId) {
+          const existingScholar = get().scholars.find(
+            s => s.id !== id && s.schoolId?.toLowerCase() === updates.schoolId.toLowerCase()
+          )
+          if (existingScholar) {
+            get().showToast('School ID already exists. Must be unique.', 'error')
+            return false
+          }
+        }
+
         set((state) => ({
           scholars: state.scholars.map((s) =>
             s.id === id ? { ...s, ...updates } : s
           ),
         }))
         get().showToast('Scholar updated successfully!', 'success')
+        return true
       },
 
       bulkUpdateScholars: (ids, updates) => {
@@ -67,6 +91,13 @@ const useScholarStore = create(
       getScholarsBySchoolYear: () => {
         const { scholars, currentSchoolYear } = get()
         return scholars.filter((s) => s.schoolYear === currentSchoolYear)
+      },
+
+      getScholarBySchoolId: (schoolId) => {
+        if (!schoolId) return null
+        return get().scholars.find(
+          s => s.schoolId?.toLowerCase() === schoolId.toLowerCase()
+        )
       },
 
       // Statistics

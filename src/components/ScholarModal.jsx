@@ -21,6 +21,7 @@ const ScholarModal = ({ scholar, onClose }) => {
     status: 'Processing',
     contactNumber: '',
     email: '',
+    schoolId: '',
     ...scholar,
   })
 
@@ -97,18 +98,22 @@ const ScholarModal = ({ scholar, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!formData.firstName || !formData.lastName || !formData.school || !formData.amount) {
+    if (!formData.firstName || !formData.lastName || !formData.school || !formData.amount || !formData.schoolId) {
       alert('Please fill in all required fields')
       return
     }
 
+    let result
     if (isEditing) {
-      updateScholar(scholar.id, formData)
+      result = updateScholar(scholar.id, formData)
     } else {
-      addScholar(formData)
+      result = addScholar(formData)
     }
 
-    onClose()
+    // Only close if the operation was successful (not blocked by duplicate School ID)
+    if (result !== false) {
+      onClose()
+    }
   }
 
   return createPortal(
@@ -398,9 +403,27 @@ const ScholarModal = ({ scholar, onClose }) => {
           {/* Contact Information */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Contact Information (Optional)
+              Contact & Identification
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                  School ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="schoolId"
+                  value={formData.schoolId}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., 2024-12345"
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ border: '1px solid #E5E5EA' }}
+                />
+                <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
+                  Unique identifier for portal access
+                </p>
+              </div>
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
                   Contact Number

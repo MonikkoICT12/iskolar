@@ -1,87 +1,193 @@
-# Iskolar - Palayan City LGU Scholarship Management System
+# Iskolar ng Palayan - Scholarship Management System
 
-A modern, React-based scholarship management system for Palayan City LGU with automatic local storage, export/import capabilities, and comprehensive reporting features.
+A modern, full-stack scholarship management system for Palayan City LGU with dual-mode authentication, built with React, Supabase, and deployed on Vercel.
 
-## 🚀 Features
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/React-18.3-blue)
+![Supabase](https://img.shields.io/badge/Supabase-Enabled-green)
 
-### Core Functionality
-- **Scholar Management**: Add, edit, delete, and search scholar records
-- **Auto-Save**: All data automatically saved to browser's local storage
-- **Advanced Filtering**: Filter by barangay, school, year level, and status
-- **Real-time Search**: Quick search across all scholar fields
+## 🌟 Features
 
-### Analytics & Reporting
-- **Dashboard Overview**: Key metrics and statistics at a glance
-- **School Summary**: Detailed breakdown by educational institution
-- **Year Level Stats**: Distribution analysis across year levels
-- **Backup & Export**: JSON export/import for data portability
-- **Print Reports**: Professional print-ready reports
+### Authentication & Access Control
+- **Dual Sign-In Modes**: Separate portals for Scholars and Administrators
+- **School-Based Authentication**: Scholars sign in with School + School ID
+- **Rate Limiting**: Protection against brute force attacks (5 attempts, 5-min lockout)
+- **Session Management**: Auto-logout after inactivity (30min admin, 15min scholar)
+- **Role-Based Access**: Admins have full CRUD access, scholars have read-only view
+
+### Scholar Management
+- **Complete CRUD Operations**: Create, Read, Update, Delete scholar records
+- **Bulk Actions**: Mark multiple scholars as "Paid" at once
+- **Advanced Search**: Search by name, School ID, course, school, or barangay
+- **Multi-Filter**: Filter by barangay, school, year level, semester, status
+- **Unique School IDs**: Each scholar has a unique identifier (e.g., NE-0001, WUP-0016)
+- **Input Validation**: Name fields accept only letters, spaces, hyphens, and apostrophes
+
+### Data & Analytics
+- **Dashboard Overview**: Real-time statistics with gradient cards
+- **School Summary**: View scholars grouped by university
+- **Year Level Stats**: Compare scholarship distribution across year levels
+- **Status Tracking**: Monitor Processing vs Paid scholarships
+- **School Year Management**: Switch between academic years
 
 ### User Experience
-- **Role-Based Access**: Admin (full access) and Staff (read/add only)
-- **School Year Filtering**: Multi-year data management
+- **Modern UI**: Clean Linear/Stripe-style design with glassmorphism
 - **Responsive Design**: Works on desktop, tablet, and mobile
-- **Toast Notifications**: Real-time feedback for all actions
+- **System Color Palette**: Consistent #007AFF blue accent throughout
+- **Accessible**: WCAG-compliant color contrasts and keyboard navigation
+- **Print Support**: Print-ready official reports
 
-## 🛠️ Tech Stack
+### Data Management
+- **Supabase Backend**: PostgreSQL database with Row Level Security (RLS)
+- **Real-time Sync**: Changes reflect immediately across all sessions
+- **Export/Import**: JSON backup and restore functionality
+- **Sample Data**: Load 75 or 100 scholars with one click for testing
 
-- **Frontend Framework**: React 18
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **State Management**: Zustand with persistence
-- **Icons**: Lucide React
-- **Date Handling**: date-fns
+## 🚀 Quick Start
 
-## 📦 Installation
+### Option 1: Deploy to Vercel (Recommended)
 
-### Prerequisites
-- Node.js 16+ and npm/yarn
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MonikkoICT12/iskolar)
 
-### Setup Steps
+1. Click the button above
+2. Follow the [Deployment Guide](DEPLOYMENT.md)
+3. Set up your Supabase database
+4. Add environment variables in Vercel
+5. Deploy! 🎉
 
-1. **Install dependencies**:
+### Option 2: Local Development
+
 ```bash
+# Clone the repository
+git clone https://github.com/MonikkoICT12/iskolar.git
+cd iskolar
+
+# Install dependencies
 npm install
-```
 
-2. **Run development server**:
-```bash
+# Copy environment template
+cp .env.example .env
+
+# Add your Supabase credentials to .env
+# VITE_SUPABASE_URL=your_supabase_url
+# VITE_SUPABASE_ANON_KEY=your_anon_key
+
+# Start development server
 npm run dev
 ```
 
-3. **Build for production**:
-```bash
-npm run build
-```
+Visit `http://localhost:5173` (or the port shown in terminal)
 
-4. **Preview production build**:
-```bash
-npm run preview
-```
+## 📋 Prerequisites
 
-## 🌐 Deployment Options
+- Node.js 18+ and npm
+- Supabase account (free tier available)
+- Vercel account (free tier available)
+- Git and GitHub account
 
-### Option 1: Netlify (Easiest)
-1. Build your project: `npm run build`
-2. Sign up at [netlify.com](https://netlify.com)
-3. Drag and drop the `dist` folder
-4. Get instant website link (yoursite.netlify.app)
+## 🗄️ Database Setup
 
-### Option 2: Vercel
-1. Sign up at [vercel.com](https://vercel.com)
-2. Import your GitHub repository
-3. Vercel auto-detects Vite and deploys
-4. Get professional domain (yoursite.vercel.app)
+### 1. Create Supabase Project
 
-### Option 3: GitHub Pages
-1. Install gh-pages: `npm install --save-dev gh-pages`
-2. Add to package.json scripts:
-   ```json
-   "predeploy": "npm run build",
-   "deploy": "gh-pages -d dist"
-   ```
-3. Run: `npm run deploy`
-4. Access at: username.github.io/iskolar
+1. Go to [supabase.com](https://supabase.com)
+2. Create a new project
+3. Save your database password
+
+### 2. Run Database Schema
+
+1. Open Supabase SQL Editor
+2. Copy contents of `supabase-schema.sql`
+3. Paste and run the script
+4. Tables and policies will be created automatically
+
+### 3. Get API Keys
+
+1. Go to Project Settings → API
+2. Copy **Project URL** and **anon public** key
+3. Add to `.env` file or Vercel environment variables
+
+## 🔐 Authentication
+
+### Admin Access
+
+**Default Credentials** (change in production):
+- Username: `admin`
+- Password: `admin123`
+
+Admins can:
+- ✅ Add, edit, delete scholars
+- ✅ View all scholar records
+- ✅ Bulk update statuses
+- ✅ Export and import data
+- ✅ Access all tabs and features
+
+### Scholar Access
+
+**Sign-In Process**:
+1. Select school from dropdown
+2. Enter unique School ID (e.g., `NE-0001`)
+3. View personal scholarship details (read-only)
+
+Scholars can:
+- ✅ View their own record only
+- ✅ See scholarship amount and status
+- ✅ View personal and academic information
+- ❌ Cannot edit or see other scholars
+
+## 🏫 School ID System
+
+Each university has a unique prefix:
+
+- **NE-####** - Nueva Ecija University of Science and Technology
+- **WUP-####** - Wesleyan University Philippines
+- **CLSU-####** - Central Luzon State University
+- **CCP-####** - Central Colleges of the Philippines
+- **TSU-####** - Tarlac State University
+
+Example: `NE-0001`, `WUP-0016`, `CLSU-0042`
+
+## 📊 Sample Data
+
+Load pre-made sample data for testing:
+
+### Option 1: 100 Scholars with School IDs
+- 20 scholars per university
+- All have unique School IDs
+- Complete contact information
+- Mix of Processing and Paid statuses
+
+### Option 2: 75 Scholars without IDs
+- 15 scholars per university
+- Need to add School IDs manually
+- For testing the School ID workflow
+
+**How to Load:**
+1. Sign in as admin
+2. Go to "Reports" tab
+3. Click "Load 100 Scholars ⭐" or "Load 75 Scholars"
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18.3** - UI framework
+- **Vite 5.3** - Build tool and dev server
+- **Tailwind CSS 3.4** - Styling
+- **Lucide React** - Icon system
+- **Zustand 4.5** - State management
+- **React Router DOM 6** - Routing
+- **date-fns 3.6** - Date formatting
+
+### Backend
+- **Supabase** - PostgreSQL database
+- **Supabase Auth** - Authentication
+- **Row Level Security** - Data protection
+- **Supabase Functions** - Serverless functions
+
+### Deployment
+- **Vercel** - Hosting and CI/CD
+- **GitHub** - Version control
+- **Environment Variables** - Secret management
 
 ## 📁 Project Structure
 
@@ -89,96 +195,182 @@ npm run preview
 iskolar/
 ├── src/
 │   ├── components/         # React components
-│   │   ├── Header.jsx
-│   │   ├── Dashboard.jsx
-│   │   ├── ScholarRecords.jsx
-│   │   ├── SchoolSummary.jsx
-│   │   ├── YearLevelStats.jsx
-│   │   ├── BackupReports.jsx
-│   │   ├── ScholarModal.jsx
-│   │   ├── HelpModal.jsx
-│   │   └── Toast.jsx
-│   ├── store/              # State management
-│   │   └── scholarStore.js
-│   ├── App.jsx             # Main app component
-│   ├── main.jsx            # Entry point
-│   └── index.css           # Global styles
-├── public/                 # Static assets
-├── index.html              # HTML template
-├── package.json            # Dependencies
-├── vite.config.js          # Vite configuration
-└── tailwind.config.js      # Tailwind configuration
+│   │   ├── SignIn.jsx     # Dual-mode sign-in page
+│   │   ├── ScholarPortal.jsx  # Scholar read-only view
+│   │   ├── Dashboard.jsx  # Admin dashboard
+│   │   ├── ScholarRecords.jsx # CRUD table
+│   │   └── ...
+│   ├── contexts/          # React contexts
+│   │   └── AuthContext.jsx    # Authentication logic
+│   ├── lib/               # Libraries
+│   │   └── supabase.js    # Supabase client
+│   ├── store/             # Zustand stores
+│   │   └── scholarStore.js    # Scholar state management
+│   ├── utils/             # Utility functions
+│   │   ├── helpers.js     # Format helpers
+│   │   ├── schools.js     # School list
+│   │   └── scholars100.js # Sample data
+│   ├── App.jsx            # Main app component
+│   ├── main.jsx           # Entry point
+│   └── index.css          # Global styles
+├── public/                # Static assets
+├── supabase-schema.sql    # Database schema
+├── vercel.json            # Vercel configuration
+├── DEPLOYMENT.md          # Deployment guide
+└── package.json           # Dependencies
+
 ```
 
-## 💾 Data Management
+## 🔧 Configuration
 
-### Local Storage
-- All data automatically saved to browser's LocalStorage
-- No manual save required
-- Data persists across sessions
-- Key: `iskolar-storage`
+### Environment Variables
 
-### Backup & Export
-1. Go to "Backup & Reports" tab
-2. Click "Export / Backup JSON"
-3. Save the JSON file to safe location
-4. To restore: Click "Import / Restore JSON" and select file
+Create a `.env` file in the root:
 
-### Moving to Another Computer
-1. Export data from old computer
-2. Send JSON file to new computer (email, USB, cloud)
-3. Import the JSON file on new computer
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGc...
 
-## 🎨 Customization
-
-### Colors
-Edit `tailwind.config.js` to change the color scheme:
-```javascript
-colors: {
-  lgu: {
-    blue: '#0F2C59',    // Primary blue
-    navy: '#0B1E3D',    // Dark navy
-    gold: '#DAA520',    // Gold accent
-    // ... add more colors
-  }
-}
+# Admin Credentials (Development Only)
+VITE_ADMIN_USERNAME=admin
+VITE_ADMIN_PASSWORD=admin123
 ```
 
-### Barangays
-Edit `src/store/scholarStore.js` to update barangay list:
-```javascript
-const BARANGAYS = [
-  'Atate', 'Caballero', 'Caimito',
-  // ... add more barangays
-]
-```
+### Vercel Environment Variables
 
-## 🔒 Security Notes
+Add in Vercel Dashboard → Settings → Environment Variables:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-- Data stored locally in browser (not sent to any server)
-- No user authentication required for local use
-- For online deployment, consider adding authentication
-- Regular backups recommended
+## 🚨 Security
 
-## 📱 Browser Support
+### Production Recommendations
 
-- Chrome/Edge (recommended)
-- Firefox
-- Safari
-- Opera
+⚠️ **IMPORTANT**: This system uses front-end authentication for development. For production:
+
+1. **Change Admin Password**
+   - Update bcrypt hash in Supabase `admins` table
+   - Use strong password (16+ characters)
+
+2. **Enable Row Level Security**
+   - Already configured in schema
+   - Review policies regularly
+
+3. **Use HTTPS Only**
+   - Automatically enabled on Vercel
+   - Force HTTPS redirects
+
+4. **Rate Limiting**
+   - Built-in: 5 attempts, 5-minute lockout
+   - Consider adding Vercel Edge Functions for IP-based limiting
+
+5. **Environment Variables**
+   - Never commit `.env` to Git
+   - Use Vercel's secret management
+   - Rotate keys periodically
+
+6. **Database Backups**
+   - Enable daily backups in Supabase
+   - Export data regularly
+
+### Security Features
+
+✅ Rate limiting on sign-in attempts  
+✅ Session timeout after inactivity  
+✅ Row Level Security (RLS) in database  
+✅ Input validation and sanitization  
+✅ School ID uniqueness enforcement  
+✅ HTTPS encryption (Vercel)  
+✅ Secure password hashing (bcrypt)
+
+## 📖 Documentation
+
+- **[Deployment Guide](DEPLOYMENT.md)** - Step-by-step deployment instructions
+- **[Login System Docs](LOGIN_SYSTEM.md)** - Authentication documentation
+- **Supabase Schema** - See `supabase-schema.sql` for database structure
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Missing Supabase environment variables"**
+- Check `.env` file exists and has correct values
+- Verify Vercel environment variables are set
+- Redeploy after adding variables
+
+**Can't sign in as admin**
+- Verify username and password in `.env`
+- Check Supabase `admins` table has the admin record
+- Review browser console (F12) for errors
+
+**Scholars not saving**
+- Check Supabase connection (green indicator)
+- Verify RLS policies are correct
+- Check for duplicate School IDs
+
+**Deploy failed on Vercel**
+- Review build logs in Vercel dashboard
+- Ensure all dependencies are in `package.json`
+- Try manual redeploy
+
+## 📈 Roadmap
+
+- [ ] Email notifications for scholarship payments
+- [ ] SMS integration for scholar alerts
+- [ ] Document upload (IDs, certificates)
+- [ ] Advanced reporting (PDF generation)
+- [ ] Multi-year comparison analytics
+- [ ] Scholar application portal
+- [ ] Payment gateway integration
 
 ## 🤝 Contributing
 
-This project was built for Palayan City LGU. Contributions and improvements are welcome!
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-Built for public use by Palayan City LGU.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👥 Authors
+
+- **Palayan City LGU** - Initial requirements
+- **Development Team** - Implementation
+
+## 🙏 Acknowledgments
+
+- Nueva Ecija Province for university data
+- Palayan City LGU for project requirements
+- Open source community for amazing tools
 
 ## 📞 Support
 
-For questions or issues, contact the LGU IT department.
+For issues and questions:
+- **GitHub Issues**: [Create an issue](https://github.com/MonikkoICT12/iskolar/issues)
+- **Email**: support@palayancity.gov.ph
+- **Documentation**: See DEPLOYMENT.md and LOGIN_SYSTEM.md
+
+## 💰 Cost
+
+**Free Tier Limits:**
+- Vercel: 100 GB bandwidth/month, unlimited deployments
+- Supabase: 500 MB database, 50K monthly active users
+
+**Estimated cost: $0/month** for typical LGU usage
+
+## 🌐 Browser Support
+
+- ✅ Chrome/Edge (recommended)
+- ✅ Firefox
+- ✅ Safari
+- ❌ Internet Explorer (not supported)
 
 ---
 
-**Built with ❤️ for Palayan City LGU**
+Made with ❤️ for Palayan City, Nueva Ecija

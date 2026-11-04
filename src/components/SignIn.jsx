@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { User, Shield, AlertCircle, Eye, EyeOff, School } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import NUEVA_ECIJA_SCHOOLS from '../utils/schools'
 
 const SignIn = () => {
   const navigate = useNavigate()
   const { signInAsAdmin, signInAsScholar, rateLimitInfo } = useAuth()
   
   const [mode, setMode] = useState('scholar') // 'scholar' or 'admin'
+  const [selectedSchool, setSelectedSchool] = useState('')
   const [schoolId, setSchoolId] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -21,7 +23,7 @@ const SignIn = () => {
     setLoading(true)
 
     try {
-      const result = signInAsScholar(schoolId.trim())
+      const result = signInAsScholar(selectedSchool, schoolId.trim())
       
       if (result.success) {
         navigate('/scholar-portal')
@@ -84,6 +86,7 @@ const SignIn = () => {
                 setError('')
                 setUsername('')
                 setPassword('')
+                setSelectedSchool('')
               }}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 mode === 'scholar'
@@ -101,6 +104,7 @@ const SignIn = () => {
                 setMode('admin')
                 setError('')
                 setSchoolId('')
+                setSelectedSchool('')
               }}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                 mode === 'admin'
@@ -143,6 +147,35 @@ const SignIn = () => {
             <form onSubmit={handleScholarSignIn} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#1D1D1F] mb-2">
+                  School / University
+                </label>
+                <div className="relative">
+                  <School className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#AAAAAA]" />
+                  <select
+                    value={selectedSchool}
+                    onChange={(e) => {
+                      setSelectedSchool(e.target.value)
+                      setSchoolId('') // Clear School ID when school changes
+                    }}
+                    className="w-full pl-10 pr-4 py-3 bg-[#F5F5F7] border border-[#E5E5EA] rounded-lg text-[#1D1D1F] placeholder-[#AAAAAA] focus:outline-none focus:ring-2 focus:ring-[#007AFF] focus:border-transparent transition-all appearance-none"
+                    disabled={isRateLimited || loading}
+                    required
+                  >
+                    <option value="">Select your school...</option>
+                    {NUEVA_ECIJA_SCHOOLS.map((school) => (
+                      <option key={school} value={school}>
+                        {school}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-xs text-[#AAAAAA] mt-2">
+                  Select your school first
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#1D1D1F] mb-2">
                   School ID
                 </label>
                 <input
@@ -151,7 +184,7 @@ const SignIn = () => {
                   onChange={(e) => setSchoolId(e.target.value)}
                   placeholder="Enter your School ID"
                   className="w-full px-4 py-3 bg-[#F5F5F7] border border-[#E5E5EA] rounded-lg text-[#1D1D1F] placeholder-[#AAAAAA] focus:outline-none focus:ring-2 focus:ring-[#007AFF] focus:border-transparent transition-all"
-                  disabled={isRateLimited || loading}
+                  disabled={isRateLimited || loading || !selectedSchool}
                   required
                 />
                 <p className="text-xs text-[#AAAAAA] mt-2">
@@ -161,7 +194,7 @@ const SignIn = () => {
 
               <button
                 type="submit"
-                disabled={isRateLimited || loading || !schoolId.trim()}
+                disabled={isRateLimited || loading || !schoolId.trim() || !selectedSchool}
                 className="w-full px-4 py-3 bg-[#007AFF] text-white font-medium rounded-lg hover:bg-[#0051D5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? 'Signing In...' : 'Sign In'}

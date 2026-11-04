@@ -2,6 +2,7 @@ import { Download, Upload, Trash2, FileJson, Printer, Database, Rocket, Users } 
 import useScholarStore from '../store/scholarStore'
 import { format } from 'date-fns'
 import { generateSampleScholars } from '../utils/sampleData'
+import { scholars100 } from '../utils/scholars100'
 
 const BackupReports = () => {
   const { exportData, importData, clearAllData, getTotalScholars, showToast } = useScholarStore()
@@ -17,6 +18,50 @@ const BackupReports = () => {
       })
       
       showToast(`Successfully added ${sampleScholars.length} sample scholars!`, 'success')
+    }
+  }
+
+  const handleLoad100Scholars = () => {
+    const currentScholars = useScholarStore.getState().scholars
+    const existingSchoolIds = currentScholars.map(s => s.schoolId).filter(Boolean)
+    
+    console.log('Current scholars:', currentScholars.length)
+    console.log('Existing School IDs:', existingSchoolIds)
+    
+    if (window.confirm(`Current scholars: ${currentScholars.length}\nThis will add 100 sample scholars with School IDs (20 per university).\nContinue?`)) {
+      // Filter out scholars whose School IDs already exist
+      const existingSchoolIdsSet = new Set(currentScholars.map(s => s.schoolId?.toLowerCase()).filter(Boolean))
+      
+      console.log('Existing School IDs (lowercase):', Array.from(existingSchoolIdsSet))
+      console.log('First 5 scholars100 IDs:', scholars100.slice(0, 5).map(s => s.schoolId))
+      
+      const newScholars = scholars100
+        .filter(scholar => !existingSchoolIdsSet.has(scholar.schoolId.toLowerCase()))
+        .map(scholar => ({
+          ...scholar,
+          id: `scholar-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date().toISOString()
+        }))
+      
+      console.log('New scholars to add:', newScholars.length)
+      
+      if (newScholars.length === 0) {
+        showToast('All scholars already exist (duplicate School IDs). Check browser console for details.', 'error')
+        return
+      }
+      
+      // Add all new scholars at once
+      useScholarStore.setState({ 
+        scholars: [...currentScholars, ...newScholars] 
+      })
+      
+      const skipped = scholars100.length - newScholars.length
+      
+      if (skipped > 0) {
+        showToast(`Added ${newScholars.length} scholars. Skipped ${skipped} (duplicate School IDs).`, 'success')
+      } else {
+        showToast(`Successfully added ${newScholars.length} scholars with School IDs!`, 'success')
+      }
     }
   }
 
@@ -90,7 +135,19 @@ const BackupReports = () => {
         </div>
 
         {/* Action Buttons Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 pt-2">
+          {/* Load 100 Sample Scholars with School IDs */}
+          <button
+            onClick={handleLoad100Scholars}
+            className="p-4 bg-blue-50 border-2 border-blue-400 rounded-xl hover:bg-blue-100 text-blue-900 flex flex-col items-start gap-2 transition text-left"
+          >
+            <Users className="w-5 h-5 text-blue-600" />
+            <div>
+              <span className="font-bold text-sm block">Load 100 Scholars ⭐</span>
+              <span className="text-xs text-slate-600">With School IDs (20/university)</span>
+            </div>
+          </button>
+
           {/* Load Sample Data */}
           <button
             onClick={handleLoadSampleData}
@@ -98,8 +155,8 @@ const BackupReports = () => {
           >
             <Users className="w-5 h-5 text-purple-600" />
             <div>
-              <span className="font-bold text-sm block">Load Sample Data</span>
-              <span className="text-xs text-slate-600">Add 75 sample scholars (15/university)</span>
+              <span className="font-bold text-sm block">Load 75 Scholars</span>
+              <span className="text-xs text-slate-600">Without IDs (15/university)</span>
             </div>
           </button>
 

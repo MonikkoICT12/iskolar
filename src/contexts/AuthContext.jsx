@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
     // DEVELOPMENT ONLY - Validate against environment variables
     if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
       const userData = {
-        type: 'admin',
+        role: 'admin',
         username: username
       }
       
@@ -123,9 +123,9 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    // Get scholars from localStorage
-    const schoolYearData = localStorage.getItem('scholars')
-    if (!schoolYearData) {
+    // Get scholars from Zustand localStorage (key: 'iskolar-storage')
+    const storeData = localStorage.getItem('iskolar-storage')
+    if (!storeData) {
       const newAttempts = failedAttempts + 1
       setFailedAttempts(newAttempts)
       
@@ -136,27 +136,31 @@ export const AuthProvider = ({ children }) => {
       
       return {
         success: false,
-        error: 'We couldn\'t find a scholar with that school and ID. Please check your details.'
+        error: 'No scholar records found. Please contact your administrator.'
       }
     }
 
     try {
-      const allData = JSON.parse(schoolYearData)
-      const currentYear = localStorage.getItem('currentSchoolYear') || '2025-2026'
-      const scholars = allData[currentYear] || []
+      const data = JSON.parse(storeData)
+      const scholars = data.state?.scholars || []
+      const currentYear = data.state?.currentSchoolYear || '2026-2027'
 
       // Find scholar by school and schoolId (case-insensitive, trimmed)
+      // Also check that it's for the current school year
       const scholar = scholars.find(s => 
         s.school?.toLowerCase().trim() === school.toLowerCase().trim() &&
-        s.schoolId?.toLowerCase().trim() === schoolId.toLowerCase().trim()
+        s.schoolId?.toLowerCase().trim() === schoolId.toLowerCase().trim() &&
+        s.schoolYear === currentYear
       )
 
       if (scholar && scholar.schoolId) {
         const userData = {
-          type: 'scholar',
+          role: 'scholar',
           scholarId: scholar.id,
           schoolId: scholar.schoolId,
-          school: scholar.school
+          school: scholar.school,
+          firstName: scholar.firstName,
+          lastName: scholar.lastName
         }
         
         const session = {
@@ -186,7 +190,7 @@ export const AuthProvider = ({ children }) => {
         
         return {
           success: false,
-          error: 'We couldn\'t find a scholar with that school and ID. Please check your details.'
+          error: 'School ID not found for the selected school. Please check your details.'
         }
       }
     } catch (error) {
@@ -204,8 +208,17 @@ export const AuthProvider = ({ children }) => {
   }
 
   const isAuthenticated = () => !!user
-  const isAdmin = () => user?.type === 'admin'
-  const isScholar = () => user?.type === 'scholar'
+  const isAdmin = () => user?.role === 'admin'
+  const isScholar = () => user?.role === 'scholar'
+
+  // Rate limit info object
+  const rateLimitInfo = {
+    isLocked: lockoutUntil && Date.now() < lockoutUntil,
+    remainingLockTime: lockoutUntil && Date.now() < lockoutUntil 
+      ? Math.ceil((lockoutUntil - Date.now()) / 1000) 
+      : 0,
+    attemptsRemaining: Math.max(0, MAX_FAILED_ATTEMPTS - failedAttempts)
+  }
 
   const value = {
     user,
@@ -213,11 +226,11 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isAdmin,
     isScholar,
-    signInAdmin,
-    signInScholar,
+    signInAsAdmin: signInAdmin,
+    signInAsScholar: signInScholar,
     signOut,
     updateActivity,
-    lockoutUntil
+    rateLimitInfo
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

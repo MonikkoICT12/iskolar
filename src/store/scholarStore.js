@@ -31,6 +31,8 @@ const useScholarStore = create(
           updatedAt: new Date().toISOString(),
           schoolYear: get().currentSchoolYear,
           status: scholar.status || 'Processing', // Default status
+          scholarStatus: scholar.scholarStatus || 'Active', // Default to Active
+          yearGraduated: scholar.yearGraduated || null,
         }
         set((state) => ({
           scholars: [...state.scholars, newScholar],
@@ -52,11 +54,24 @@ const useScholarStore = create(
       bulkUpdateScholars: (ids, updates) => {
         set((state) => ({
           scholars: state.scholars.map((s) =>
-            ids.includes(s.id) ? { ...s, ...updates } : s
+            ids.includes(s.id) ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
           ),
         }))
         const count = ids.length
         get().showToast(`${count} scholar${count === 1 ? '' : 's'} updated successfully!`, 'success')
+      },
+
+      bulkMarkAsGraduated: (ids) => {
+        const currentYear = new Date().getFullYear()
+        set((state) => ({
+          scholars: state.scholars.map((s) =>
+            ids.includes(s.id) 
+              ? { ...s, scholarStatus: 'Graduated', yearGraduated: currentYear, updatedAt: new Date().toISOString() } 
+              : s
+          ),
+        }))
+        const count = ids.length
+        get().showToast(`${count} scholar${count === 1 ? '' : 's'} marked as graduated!`, 'success')
       },
 
       deleteScholar: (id) => {
@@ -70,6 +85,29 @@ const useScholarStore = create(
       getScholarsBySchoolYear: () => {
         const { scholars, currentSchoolYear } = get()
         return scholars.filter((s) => s.schoolYear === currentSchoolYear)
+      },
+
+      getActiveScholars: () => {
+        const scholars = get().getScholarsBySchoolYear()
+        // Treat missing scholarStatus as Active for backward compatibility
+        return scholars.filter((s) => !s.scholarStatus || s.scholarStatus === 'Active')
+      },
+
+      getGraduatedScholars: () => {
+        const scholars = get().getScholarsBySchoolYear()
+        return scholars.filter((s) => s.scholarStatus === 'Graduated')
+      },
+
+      getGraduatedScholarsBySchool: (school) => {
+        return get()
+          .getGraduatedScholars()
+          .filter((s) => s.school === school)
+      },
+
+      getGraduationYears: () => {
+        const graduates = get().getGraduatedScholars()
+        const years = [...new Set(graduates.map((s) => s.yearGraduated).filter(Boolean))]
+        return years.sort((a, b) => b - a) // Most recent first
       },
 
 
@@ -86,14 +124,20 @@ const useScholarStore = create(
       },
 
       getSchoolsList: () => {
-        const scholars = get().getScholarsBySchoolYear()
+        const scholars = get().getActiveScholars() // Only active scholars
+        const schools = [...new Set(scholars.map((s) => s.school))]
+        return schools.sort()
+      },
+
+      getGraduatedSchoolsList: () => {
+        const scholars = get().getGraduatedScholars()
         const schools = [...new Set(scholars.map((s) => s.school))]
         return schools.sort()
       },
 
       getScholarsBySchool: (school) => {
         return get()
-          .getScholarsBySchoolYear()
+          .getActiveScholars() // Only active scholars
           .filter((s) => s.school === school)
       },
 
@@ -180,19 +224,32 @@ const useScholarStore = create(
       },
 
       updateSchoolName: (oldName, newName) => {
-        const schools = get().getSchoolsList()
+        // Normalize names for comparison
+        const normalizedOld = oldName.trim().replace(/\s+/g, ' ')
+        const normalizedNew = newName.trim().replace(/\s+/g, ' ')
+        
+        if (!normalizedNew) {
+          get().showToast('School name cannot be empty', 'error')
+          return false
+        }
+
+        // Get ALL schools (active + graduated)
+        const allSchools = [...new Set(get().scholars.map((s) => s.school))]
         
         // Check for duplicates (case-insensitive), excluding the old name
-        if (schools.some(s => s.toLowerCase() === newName.toLowerCase() && s !== oldName)) {
-          get().showToast('A school with this name already exists', 'error')
+        if (allSchools.some(s => 
+          s.toLowerCase().replace(/\s+/g, ' ') === normalizedNew.toLowerCase() && 
+          s.toLowerCase().replace(/\s+/g, ' ') !== normalizedOld.toLowerCase()
+        )) {
+          get().showToast('This school already exists', 'error')
           return false
         }
         
-        // Update all scholars with this school name
+        // Update ALL scholars (active and graduated) with this school name
         set((state) => ({
           scholars: state.scholars.map((s) =>
             s.school === oldName 
-              ? { ...s, school: newName, updatedAt: new Date().toISOString() } 
+              ? { ...s, school: normalizedNew, updatedAt: new Date().toISOString() } 
               : s
           ),
         }))

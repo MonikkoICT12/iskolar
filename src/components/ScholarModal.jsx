@@ -18,6 +18,8 @@ const ScholarModal = ({ scholar, onClose }) => {
     course: '',
     amount: '',
     status: 'Processing',
+    scholarStatus: 'Active',
+    yearGraduated: new Date().getFullYear(),
     contactNumber: '',
     email: '',
     ...scholar,
@@ -44,9 +46,12 @@ const ScholarModal = ({ scholar, onClose }) => {
 
   useEffect(() => {
     if (schoolSearch) {
-      const filtered = existingSchools.filter(school =>
-        school.toLowerCase().includes(schoolSearch.toLowerCase())
-      )
+      // Filter by matching each word separately (case-insensitive)
+      const searchWords = schoolSearch.toLowerCase().split(/\s+/).filter(Boolean)
+      const filtered = existingSchools.filter(school => {
+        const schoolLower = school.toLowerCase()
+        return searchWords.every(word => schoolLower.includes(word))
+      })
       setFilteredSchools(filtered)
     } else {
       setFilteredSchools(existingSchools)
@@ -77,6 +82,14 @@ const ScholarModal = ({ scholar, onClose }) => {
     setSchoolSearch(school)
     setFormData((prev) => ({ ...prev, school: school }))
     setShowSchoolDropdown(false)
+  }
+
+  const handleCreateNewSchool = () => {
+    const normalizedName = schoolSearch.trim().replace(/\s+/g, ' ')
+    if (normalizedName) {
+      setFormData((prev) => ({ ...prev, school: normalizedName }))
+      setShowSchoolDropdown(false)
+    }
   }
 
   const handleKeyDown = (e) => {
@@ -257,38 +270,71 @@ const ScholarModal = ({ scholar, onClose }) => {
                   onFocus={() => setShowSchoolDropdown(true)}
                   onBlur={() => setTimeout(() => setShowSchoolDropdown(false), 200)}
                   required
-                  placeholder="Type school name or select from existing..."
+                  placeholder={isEditing ? "Select from existing schools..." : "Type school name or select from existing..."}
                   className="w-full px-3 py-2 rounded-lg text-sm"
                   style={{ border: '1px solid #E5E5EA' }}
                 />
                 {showSchoolDropdown && filteredSchools.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto" style={{ border: '1px solid #E5E5EA' }}>
-                    {filteredSchools.map((school, index) => (
-                      <div
-                        key={index}
-                        onClick={() => handleSchoolSelect(school)}
-                        className="px-3 py-2 cursor-pointer text-sm border-b last:border-b-0"
-                        style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        {school}
-                      </div>
-                    ))}
+                    {filteredSchools.map((school, index) => {
+                      // Highlight matching text
+                      const searchWords = schoolSearch.toLowerCase().split(/\s+/).filter(Boolean)
+                      const parts = []
+                      let currentText = school
+                      
+                      searchWords.forEach(word => {
+                        const regex = new RegExp(`(${word})`, 'gi')
+                        const tempParts = []
+                        currentText.split(regex).forEach(part => {
+                          if (part.toLowerCase() === word.toLowerCase()) {
+                            tempParts.push(<strong key={Math.random()}>{part}</strong>)
+                          } else if (part) {
+                            tempParts.push(part)
+                          }
+                        })
+                        currentText = tempParts
+                      })
+
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => handleSchoolSelect(school)}
+                          className="px-3 py-2 cursor-pointer text-sm border-b last:border-b-0"
+                          style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          {typeof currentText === 'string' ? school : currentText}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
                 {showSchoolDropdown && filteredSchools.length === 0 && schoolSearch && (
                   <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg px-3 py-2" style={{ border: '1px solid #E5E5EA' }}>
-                    <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
-                      New school: "{schoolSearch}"
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                      This will be added to the system
-                    </p>
+                    {!isEditing ? (
+                      <div
+                        onClick={handleCreateNewSchool}
+                        className="cursor-pointer"
+                      >
+                        <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
+                          Use "{schoolSearch.trim().replace(/\s+/g, ' ')}" as a new school
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
+                          This will be added to the system
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs" style={{ color: '#AAAAAA' }}>
+                        No matching schools found. Please select from existing schools.
+                      </p>
+                    )}
                   </div>
                 )}
                 <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                  Select from existing schools or type a new name
+                  {isEditing 
+                    ? "Select from existing schools only" 
+                    : "Select from existing schools or type a new name"}
                 </p>
               </div>
               <div>
@@ -370,32 +416,84 @@ const ScholarModal = ({ scholar, onClose }) => {
                 />
               </div>
               {isEditing && (
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                    Status <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ border: '1px solid #E5E5EA' }}
-                  >
-                    <option value="Processing">Processing</option>
-                    <option value="Paid">Paid</option>
-                  </select>
-                  <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                    Update payment status when released
-                  </p>
-                </div>
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                      Payment Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 rounded-lg text-sm"
+                      style={{ border: '1px solid #E5E5EA' }}
+                    >
+                      <option value="Processing">Processing</option>
+                      <option value="Paid">Paid</option>
+                    </select>
+                    <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
+                      Update payment status when released
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                      Scholar Status <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-4 mt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="scholarStatus"
+                          value="Active"
+                          checked={formData.scholarStatus === 'Active' || !formData.scholarStatus}
+                          onChange={handleChange}
+                          className="w-4 h-4"
+                          style={{ accentColor: '#007AFF' }}
+                        />
+                        <span className="text-sm" style={{ color: '#1D1D1F' }}>Active</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="scholarStatus"
+                          value="Graduated"
+                          checked={formData.scholarStatus === 'Graduated'}
+                          onChange={handleChange}
+                          className="w-4 h-4"
+                          style={{ accentColor: '#007AFF' }}
+                        />
+                        <span className="text-sm" style={{ color: '#1D1D1F' }}>Graduated</span>
+                      </label>
+                    </div>
+                  </div>
+                  {formData.scholarStatus === 'Graduated' && (
+                    <div>
+                      <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                        Year Graduated
+                      </label>
+                      <input
+                        type="number"
+                        name="yearGraduated"
+                        value={formData.yearGraduated}
+                        onChange={handleChange}
+                        min="2000"
+                        max="2100"
+                        placeholder="e.g., 2024"
+                        className="w-full px-3 py-2 rounded-lg text-sm"
+                        style={{ border: '1px solid #E5E5EA' }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
               {!isEditing && (
                 <div className="md:col-span-2">
                   <div className="rounded-lg p-3" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
                     <p className="text-xs" style={{ color: '#1D1D1F' }}>
                       <span className="font-semibold">Note:</span> New scholars are automatically set to{' '}
-                      <span className="font-bold">"Processing"</span> status. You can change this to "Paid" after payment is released.
+                      <span className="font-bold">"Active"</span> status with payment status{' '}
+                      <span className="font-bold">"Processing"</span>. You can change these after adding the scholar.
                     </p>
                   </div>
                 </div>

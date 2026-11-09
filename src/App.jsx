@@ -3,7 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
 import ScholarRecords from './components/ScholarRecords'
-import SchoolsManagement from './components/SchoolsManagement'
+import SchoolsTab from './components/SchoolsTab'
+import GraduatesTab from './components/GraduatesTab'
 import YearLevelStats from './components/YearLevelStats'
 import BackupReports from './components/BackupReports'
 import LGUSystemPage from './components/LGUSystemPage'
@@ -37,7 +38,9 @@ function AdminLayout() {
       case 'scholars':
         return <ScholarRecords onEditScholar={handleEditScholar} />
       case 'schools':
-        return <SchoolsManagement />
+        return <SchoolsTab />
+      case 'graduates':
+        return <GraduatesTab />
       case 'yearlevel':
         return <YearLevelStats />
       case 'reports':

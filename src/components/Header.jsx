@@ -8,6 +8,7 @@ const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
     { id: 'dashboard', label: 'Overview', icon: BarChart3 },
     { id: 'scholars', label: 'Scholars', icon: Users },
     { id: 'schools', label: 'Schools', icon: School },
+    { id: 'graduates', label: 'Graduates', icon: Award },
     { id: 'yearlevel', label: 'Year Levels', icon: Layers },
     { id: 'reports', label: 'Reports', icon: Database },
   ]

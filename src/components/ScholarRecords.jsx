@@ -4,7 +4,7 @@ import useScholarStore, { BARANGAYS, YEAR_LEVELS, SEMESTERS } from '../store/sch
 import ConfirmModal from './ConfirmModal'
 
 const ScholarRecords = ({ onEditScholar }) => {
-  const { getScholarsBySchoolYear, getSchoolsList, deleteScholar, bulkUpdateScholars } = useScholarStore()
+  const { getScholarsBySchoolYear, getActiveScholars, getSchoolsList, deleteScholar, bulkUpdateScholars, bulkMarkAsGraduated } = useScholarStore()
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterBarangay, setFilterBarangay] = useState('ALL')
@@ -12,9 +12,11 @@ const ScholarRecords = ({ onEditScholar }) => {
   const [filterYear, setFilterYear] = useState('ALL')
   const [filterSemester, setFilterSemester] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
+  const [filterScholarStatus, setFilterScholarStatus] = useState('Active') // Default to Active only
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scholar: null })
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkPaidConfirm, setBulkPaidConfirm] = useState(false)
+  const [bulkGraduatedConfirm, setBulkGraduatedConfirm] = useState(false)
 
   const allScholars = getScholarsBySchoolYear()
   const schools = getSchoolsList()
@@ -32,14 +34,18 @@ const ScholarRecords = ({ onEditScholar }) => {
     const matchesYear = filterYear === 'ALL' || scholar.yearLevel === filterYear
     const matchesSemester = filterSemester === 'ALL' || scholar.semester === filterSemester
     const matchesStatus = filterStatus === 'ALL' || scholar.status === filterStatus
+    
+    // Scholar status filter (treat missing as Active)
+    const scholarStatus = scholar.scholarStatus || 'Active'
+    const matchesScholarStatus = filterScholarStatus === 'ALL' || scholarStatus === filterScholarStatus
 
-    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus
+    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus && matchesScholarStatus
   })
 
   // Reset selection when filters or search changes
   useEffect(() => {
     setSelectedIds([])
-  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus])
+  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus, filterScholarStatus])
 
   // Selection handlers
   const handleSelectAll = () => {
@@ -68,10 +74,22 @@ const ScholarRecords = ({ onEditScholar }) => {
     }
   }
 
+  const handleBulkMarkAsGraduated = () => {
+    if (selectedIds.length > 0) {
+      setBulkGraduatedConfirm(true)
+    }
+  }
+
   const confirmBulkPaid = () => {
     bulkUpdateScholars(selectedIds, { status: 'Paid' })
     setSelectedIds([])
     setBulkPaidConfirm(false)
+  }
+
+  const confirmBulkGraduated = () => {
+    bulkMarkAsGraduated(selectedIds)
+    setSelectedIds([])
+    setBulkGraduatedConfirm(false)
   }
 
   // Checkbox states
@@ -133,16 +151,28 @@ const ScholarRecords = ({ onEditScholar }) => {
               Clear selection
             </button>
           </div>
-          <button
-            onClick={handleBulkMarkAsPaid}
-            className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
-            style={{ backgroundColor: '#007AFF' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
-          >
-            <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
-            Mark as Paid
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleBulkMarkAsPaid}
+              className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
+              style={{ backgroundColor: '#10b981' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+            >
+              <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
+              Mark as Paid
+            </button>
+            <button
+              onClick={handleBulkMarkAsGraduated}
+              className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
+              style={{ backgroundColor: '#007AFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
+            >
+              <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
+              Mark as Graduated
+            </button>
+          </div>
         </div>
       )}
 
@@ -229,6 +259,17 @@ const ScholarRecords = ({ onEditScholar }) => {
               <option value="ALL">All Status</option>
               <option value="Processing">Processing</option>
               <option value="Paid">Paid</option>
+            </select>
+
+            <select
+              value={filterScholarStatus}
+              onChange={(e) => setFilterScholarStatus(e.target.value)}
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
+            >
+              <option value="Active">Active</option>
+              <option value="Graduated">Graduated</option>
+              <option value="ALL">All Scholars</option>
             </select>
           </div>
         </div>
@@ -407,6 +448,18 @@ const ScholarRecords = ({ onEditScholar }) => {
         title="Mark as Paid?"
         message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Paid?`}
         confirmText="Mark as Paid"
+        cancelText="Cancel"
+        type="success"
+      />
+
+      {/* Bulk Graduated Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bulkGraduatedConfirm}
+        onClose={() => setBulkGraduatedConfirm(false)}
+        onConfirm={confirmBulkGraduated}
+        title="Mark as Graduated?"
+        message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Graduated?`}
+        confirmText="Mark as Graduated"
         cancelText="Cancel"
         type="success"
       />

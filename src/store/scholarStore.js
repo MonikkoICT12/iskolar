@@ -24,21 +24,11 @@ const useScholarStore = create(
 
       // Scholar CRUD operations
       addScholar: (scholar) => {
-        // Validate School ID uniqueness (case-insensitive)
-        if (scholar.schoolId) {
-          const existingScholar = get().scholars.find(
-            s => s.schoolId?.toLowerCase() === scholar.schoolId.toLowerCase()
-          )
-          if (existingScholar) {
-            get().showToast('School ID already exists. Must be unique.', 'error')
-            return false
-          }
-        }
-
         const newScholar = {
           ...scholar,
-          id: Date.now().toString(),
+          id: crypto.randomUUID(), // Generate UUID for internal use
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           schoolYear: get().currentSchoolYear,
           status: scholar.status || 'Processing', // Default status
         }
@@ -50,20 +40,9 @@ const useScholarStore = create(
       },
 
       updateScholar: (id, updates) => {
-        // Validate School ID uniqueness when updating (case-insensitive)
-        if (updates.schoolId) {
-          const existingScholar = get().scholars.find(
-            s => s.id !== id && s.schoolId?.toLowerCase() === updates.schoolId.toLowerCase()
-          )
-          if (existingScholar) {
-            get().showToast('School ID already exists. Must be unique.', 'error')
-            return false
-          }
-        }
-
         set((state) => ({
           scholars: state.scholars.map((s) =>
-            s.id === id ? { ...s, ...updates } : s
+            s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
           ),
         }))
         get().showToast('Scholar updated successfully!', 'success')
@@ -93,12 +72,7 @@ const useScholarStore = create(
         return scholars.filter((s) => s.schoolYear === currentSchoolYear)
       },
 
-      getScholarBySchoolId: (schoolId) => {
-        if (!schoolId) return null
-        return get().scholars.find(
-          s => s.schoolId?.toLowerCase() === schoolId.toLowerCase()
-        )
-      },
+
 
       // Statistics
       getTotalScholars: () => {
@@ -165,6 +139,84 @@ const useScholarStore = create(
             percentage,
           }
         })
+      },
+
+      // School Management
+      addSchool: (schoolName) => {
+        const schools = get().getSchoolsList()
+        
+        // Check for duplicates (case-insensitive)
+        if (schools.some(s => s.toLowerCase() === schoolName.toLowerCase())) {
+          get().showToast('School already exists', 'error')
+          return false
+        }
+        
+        // Add a temporary scholar with this school to register it, then remove
+        const tempScholar = {
+          id: crypto.randomUUID(),
+          name: '__TEMP_SCHOOL_REGISTRATION__',
+          school: schoolName,
+          yearLevel: '1st Year',
+          semester: '1st Sem',
+          amount: 0,
+          barangay: 'Poblacion',
+          paymentStatus: 'Unpaid',
+          schoolYear: get().currentSchoolYear,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        
+        set((state) => ({
+          scholars: [...state.scholars, tempScholar],
+        }))
+        
+        // Remove the temporary scholar immediately
+        set((state) => ({
+          scholars: state.scholars.filter((s) => s.name !== '__TEMP_SCHOOL_REGISTRATION__'),
+        }))
+        
+        get().showToast(`School "${schoolName}" added successfully!`, 'success')
+        return true
+      },
+
+      updateSchoolName: (oldName, newName) => {
+        const schools = get().getSchoolsList()
+        
+        // Check for duplicates (case-insensitive), excluding the old name
+        if (schools.some(s => s.toLowerCase() === newName.toLowerCase() && s !== oldName)) {
+          get().showToast('A school with this name already exists', 'error')
+          return false
+        }
+        
+        // Update all scholars with this school name
+        set((state) => ({
+          scholars: state.scholars.map((s) =>
+            s.school === oldName 
+              ? { ...s, school: newName, updatedAt: new Date().toISOString() } 
+              : s
+          ),
+        }))
+        
+        get().showToast(`School name updated successfully!`, 'success')
+        return true
+      },
+
+      deleteSchool: (schoolName) => {
+        if (get().validateSchoolInUse(schoolName)) {
+          const count = get().getScholarsBySchool(schoolName).length
+          get().showToast(
+            `Cannot delete: ${count} scholar${count === 1 ? '' : 's'} still using this school`, 
+            'error'
+          )
+          return false
+        }
+        
+        get().showToast(`School "${schoolName}" deleted successfully!`, 'warning')
+        return true
+      },
+
+      validateSchoolInUse: (schoolName) => {
+        return get().getScholarsBySchool(schoolName).length > 0
       },
 
       // School year management

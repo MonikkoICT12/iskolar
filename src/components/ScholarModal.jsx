@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import useScholarStore, { BARANGAYS, YEAR_LEVELS, SEMESTERS } from '../store/scholarStore'
-import NUEVA_ECIJA_SCHOOLS from '../utils/schools'
 
 const ScholarModal = ({ scholar, onClose }) => {
-  const { addScholar, updateScholar } = useScholarStore()
+  const { addScholar, updateScholar, getSchoolsList } = useScholarStore()
   const isEditing = !!scholar
 
   const [formData, setFormData] = useState({
@@ -21,13 +20,15 @@ const ScholarModal = ({ scholar, onClose }) => {
     status: 'Processing',
     contactNumber: '',
     email: '',
-    schoolId: '',
     ...scholar,
   })
 
   const [schoolSearch, setSchoolSearch] = useState(scholar?.school || '')
   const [showSchoolDropdown, setShowSchoolDropdown] = useState(false)
-  const [filteredSchools, setFilteredSchools] = useState(NUEVA_ECIJA_SCHOOLS)
+  const [filteredSchools, setFilteredSchools] = useState([])
+
+  // Get existing schools from the system
+  const existingSchools = getSchoolsList()
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -43,14 +44,14 @@ const ScholarModal = ({ scholar, onClose }) => {
 
   useEffect(() => {
     if (schoolSearch) {
-      const filtered = NUEVA_ECIJA_SCHOOLS.filter(school =>
+      const filtered = existingSchools.filter(school =>
         school.toLowerCase().includes(schoolSearch.toLowerCase())
       )
       setFilteredSchools(filtered)
     } else {
-      setFilteredSchools(NUEVA_ECIJA_SCHOOLS)
+      setFilteredSchools(existingSchools)
     }
-  }, [schoolSearch])
+  }, [schoolSearch, existingSchools])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -98,22 +99,18 @@ const ScholarModal = ({ scholar, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!formData.firstName || !formData.lastName || !formData.school || !formData.amount || !formData.schoolId) {
+    if (!formData.firstName || !formData.lastName || !formData.school || !formData.amount) {
       alert('Please fill in all required fields')
       return
     }
 
-    let result
     if (isEditing) {
-      result = updateScholar(scholar.id, formData)
+      updateScholar(scholar.id, formData)
     } else {
-      result = addScholar(formData)
+      addScholar(formData)
     }
 
-    // Only close if the operation was successful (not blocked by duplicate School ID)
-    if (result !== false) {
-      onClose()
-    }
+    onClose()
   }
 
   return createPortal(
@@ -260,7 +257,7 @@ const ScholarModal = ({ scholar, onClose }) => {
                   onFocus={() => setShowSchoolDropdown(true)}
                   onBlur={() => setTimeout(() => setShowSchoolDropdown(false), 200)}
                   required
-                  placeholder="Type to search Nueva Ecija schools..."
+                  placeholder="Type school name or select from existing..."
                   className="w-full px-3 py-2 rounded-lg text-sm"
                   style={{ border: '1px solid #E5E5EA' }}
                 />
@@ -281,12 +278,18 @@ const ScholarModal = ({ scholar, onClose }) => {
                   </div>
                 )}
                 {showSchoolDropdown && filteredSchools.length === 0 && schoolSearch && (
-                  <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg" style={{ border: '1px solid #E5E5EA' }}>
-                    <div className="px-3 py-2 text-sm italic" style={{ color: '#AAAAAA' }}>
-                      No schools found. You can still enter a custom school name.
-                    </div>
+                  <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg px-3 py-2" style={{ border: '1px solid #E5E5EA' }}>
+                    <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
+                      New school: "{schoolSearch}"
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
+                      This will be added to the system
+                    </p>
                   </div>
                 )}
+                <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
+                  Select from existing schools or type a new name
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
@@ -403,27 +406,9 @@ const ScholarModal = ({ scholar, onClose }) => {
           {/* Contact Information */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Contact & Identification
+              Contact Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  School ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="schoolId"
-                  value={formData.schoolId}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g., 2024-12345"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
-                <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                  Unique identifier for portal access
-                </p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
                   Contact Number

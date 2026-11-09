@@ -1,17 +1,8 @@
-import { Award, HelpCircle, Plus, BarChart3, Users, School, Layers, Database, ExternalLink, LogOut } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Award, HelpCircle, Plus, BarChart3, Users, School, Layers, Database, ExternalLink } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 
 const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
   const { currentSchoolYear, setSchoolYear } = useScholarStore()
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
-
-  const handleSignOut = () => {
-    signOut()
-    navigate('/')
-  }
 
   const tabs = [
     { id: 'dashboard', label: 'Overview', icon: BarChart3 },
@@ -138,27 +129,6 @@ const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
             >
               <HelpCircle className="w-5 h-5" strokeWidth={1.5} />
             </button>
-
-            {/* Sign Out Button (Admin only) */}
-            {user && user.role === 'admin' && (
-              <button
-                onClick={handleSignOut}
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
-                style={{ color: '#AAAAAA' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#1D1D1F'
-                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#AAAAAA'
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-                aria-label="Sign Out"
-                title="Sign Out"
-              >
-                <LogOut className="w-5 h-5" strokeWidth={1.5} />
-              </button>
-            )}
 
             {/* LGU Portal Link */}
             <button

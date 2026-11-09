@@ -1,68 +1,35 @@
-import { Download, Upload, Trash2, FileJson, Printer, Database, Rocket, Users } from 'lucide-react'
+import { Download, Upload, Trash2, FileJson, Printer, Database } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { format } from 'date-fns'
-import { generateSampleScholars } from '../utils/sampleData'
-import { scholars100 } from '../utils/scholars100'
+import ConfirmModal from './ConfirmModal'
+import { useState } from 'react'
 
 const BackupReports = () => {
-  const { exportData, importData, clearAllData, getTotalScholars, showToast } = useScholarStore()
+  const { exportData, importData, getTotalScholars, showToast, scholars } = useScholarStore()
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
-  const handleLoadSampleData = () => {
-    if (window.confirm('This will add 75 sample scholars (15 per university in Nueva Ecija). Continue?')) {
-      const sampleScholars = generateSampleScholars()
-      const currentScholars = useScholarStore.getState().scholars
-      
-      // Add sample scholars to existing data
-      useScholarStore.setState({ 
-        scholars: [...currentScholars, ...sampleScholars] 
-      })
-      
-      showToast(`Successfully added ${sampleScholars.length} sample scholars!`, 'success')
-    }
+  const getLastUpdated = () => {
+    if (scholars.length === 0) return format(new Date(), 'PPP')
+    
+    const dates = scholars
+      .map(s => s.updatedAt || s.createdAt)
+      .filter(Boolean)
+      .map(d => new Date(d))
+    
+    if (dates.length === 0) return format(new Date(), 'PPP')
+    
+    const mostRecent = new Date(Math.max(...dates))
+    return format(mostRecent, 'PPP')
   }
 
-  const handleLoad100Scholars = () => {
-    const currentScholars = useScholarStore.getState().scholars
-    const existingSchoolIds = currentScholars.map(s => s.schoolId).filter(Boolean)
-    
-    console.log('Current scholars:', currentScholars.length)
-    console.log('Existing School IDs:', existingSchoolIds)
-    
-    if (window.confirm(`Current scholars: ${currentScholars.length}\nThis will add 100 sample scholars with School IDs (20 per university).\nContinue?`)) {
-      // Filter out scholars whose School IDs already exist
-      const existingSchoolIdsSet = new Set(currentScholars.map(s => s.schoolId?.toLowerCase()).filter(Boolean))
-      
-      console.log('Existing School IDs (lowercase):', Array.from(existingSchoolIdsSet))
-      console.log('First 5 scholars100 IDs:', scholars100.slice(0, 5).map(s => s.schoolId))
-      
-      const newScholars = scholars100
-        .filter(scholar => !existingSchoolIdsSet.has(scholar.schoolId.toLowerCase()))
-        .map(scholar => ({
-          ...scholar,
-          id: `scholar-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date().toISOString()
-        }))
-      
-      console.log('New scholars to add:', newScholars.length)
-      
-      if (newScholars.length === 0) {
-        showToast('All scholars already exist (duplicate School IDs). Check browser console for details.', 'error')
-        return
-      }
-      
-      // Add all new scholars at once
-      useScholarStore.setState({ 
-        scholars: [...currentScholars, ...newScholars] 
-      })
-      
-      const skipped = scholars100.length - newScholars.length
-      
-      if (skipped > 0) {
-        showToast(`Added ${newScholars.length} scholars. Skipped ${skipped} (duplicate School IDs).`, 'success')
-      } else {
-        showToast(`Successfully added ${newScholars.length} scholars with School IDs!`, 'success')
-      }
-    }
+  const handleClearAllData = () => {
+    setShowClearConfirm(true)
+  }
+
+  const confirmClearData = () => {
+    useScholarStore.setState({ scholars: [] })
+    showToast('All data cleared!', 'warning')
+    setShowClearConfirm(false)
   }
 
   const handleExportJSON = () => {
@@ -105,60 +72,15 @@ const BackupReports = () => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
           <Database className="w-5 h-5 text-lgu-blue" />
-          Data Management & Local Backup
+          Data Management & Backup
         </h2>
         <p className="text-xs text-slate-500 mb-4">
-          All data you enter is <strong>automatically saved</strong> to your computer's browser.
-          You can export a backup file (JSON) so you won't lose data even if you switch computers.
+          All data is <strong>automatically saved</strong> in the browser of the device you are using.
+          Admins should export a backup regularly to prevent data loss.
         </p>
 
-        {/* Free Hosting Guide Banner */}
-        <div className="mb-5 bg-gradient-to-r from-indigo-900 to-lgu-navy text-white p-4 rounded-xl border border-indigo-700 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="bg-amber-400 text-lgu-navy font-bold text-[10px] px-2 py-0.5 rounded uppercase">
-                Want a real website link (.com / .app)?
-              </span>
-              <h4 className="font-bold text-sm">
-                Turn this into an online website accessible to other staff!
-              </h4>
-              <p className="text-xs text-slate-300">
-                You can host this <strong>FREE (Forever)</strong> on Netlify,
-                GitHub Pages, or Vercel.
-              </p>
-            </div>
-            <button className="bg-amber-400 hover:bg-amber-300 text-lgu-navy font-extrabold text-xs px-4 py-2.5 rounded-lg whitespace-nowrap shadow flex items-center gap-2 transition">
-              <Rocket className="w-4 h-4" />
-              Deploy Online
-            </button>
-          </div>
-        </div>
-
         {/* Action Buttons Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 pt-2">
-          {/* Load 100 Sample Scholars with School IDs */}
-          <button
-            onClick={handleLoad100Scholars}
-            className="p-4 bg-blue-50 border-2 border-blue-400 rounded-xl hover:bg-blue-100 text-blue-900 flex flex-col items-start gap-2 transition text-left"
-          >
-            <Users className="w-5 h-5 text-blue-600" />
-            <div>
-              <span className="font-bold text-sm block">Load 100 Scholars ⭐</span>
-              <span className="text-xs text-slate-600">With School IDs (20/university)</span>
-            </div>
-          </button>
-
-          {/* Load Sample Data */}
-          <button
-            onClick={handleLoadSampleData}
-            className="p-4 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 text-purple-900 flex flex-col items-start gap-2 transition text-left"
-          >
-            <Users className="w-5 h-5 text-purple-600" />
-            <div>
-              <span className="font-bold text-sm block">Load 75 Scholars</span>
-              <span className="text-xs text-slate-600">Without IDs (15/university)</span>
-            </div>
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
 
           {/* Export JSON */}
           <button
@@ -198,7 +120,7 @@ const BackupReports = () => {
 
           {/* Clear All Data */}
           <button
-            onClick={clearAllData}
+            onClick={handleClearAllData}
             className="p-4 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 text-red-900 flex flex-col items-start gap-2 transition text-left"
           >
             <Trash2 className="w-5 h-5 text-red-600" />
@@ -220,11 +142,11 @@ const BackupReports = () => {
           </div>
           <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
             <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Storage Type</p>
-            <p className="text-sm font-bold text-slate-900">Browser LocalStorage</p>
+            <p className="text-sm font-bold text-slate-900">Browser Storage</p>
           </div>
           <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
             <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Last Updated</p>
-            <p className="text-sm font-bold text-slate-900">{format(new Date(), 'PPP')}</p>
+            <p className="text-sm font-bold text-slate-900">{getLastUpdated()}</p>
           </div>
         </div>
       </div>
@@ -236,13 +158,24 @@ const BackupReports = () => {
           How to Use the Backup System
         </h3>
         <ul className="text-xs text-amber-800 space-y-1 list-disc list-inside">
-          <li>Click <strong>"Export / Backup JSON"</strong> to download your data</li>
-          <li>Save the JSON file somewhere safe (USB drive, cloud storage, email)</li>
+          <li>Click <strong>"Export / Backup JSON"</strong> regularly to download your data</li>
+          <li>Save the backup file somewhere safe (USB drive, cloud storage, email)</li>
           <li>To restore data, click <strong>"Import / Restore JSON"</strong> and select your backup file</li>
-          <li>Data is automatically saved in your browser - no manual save needed</li>
-          <li>To move to another computer, export from old computer and import to new one</li>
+          <li>Data is saved in the browser of the device you are using</li>
+          <li>Regular backups prevent data loss if the browser cache is cleared</li>
         </ul>
       </div>
+
+      {/* Clear Data Confirmation Modal */}
+      {showClearConfirm && (
+        <ConfirmModal
+          title="Clear All Data?"
+          message="This will permanently delete ALL scholar records. This action cannot be undone. Are you sure you want to proceed?"
+          onConfirm={confirmClearData}
+          onCancel={() => setShowClearConfirm(false)}
+          type="danger"
+        />
+      )}
     </div>
   )
 }

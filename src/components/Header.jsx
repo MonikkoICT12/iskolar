@@ -1,7 +1,11 @@
-import { Award, HelpCircle, Plus, BarChart3, Users, School, Layers, Database, ExternalLink } from 'lucide-react'
+import { Award, HelpCircle, Plus, BarChart3, Users, School, Layers, Database, ExternalLink, LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import useScholarStore from '../store/scholarStore'
 
 const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
   const { currentSchoolYear, setSchoolYear } = useScholarStore()
 
   const tabs = [
@@ -15,6 +19,15 @@ const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
 
   const handleLGUPortalClick = () => {
     window.open('https://palayancity.golgu.ph/login', '_blank', 'noopener,noreferrer')
+  }
+
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      navigate('/')
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
   }
 
   return (
@@ -145,6 +158,23 @@ const Header = ({ activeTab, onTabChange, onAddScholar, onOpenHelp }) => {
             >
               <span>LGU Portal</span>
               <ExternalLink className="w-3.5 h-3.5" strokeWidth={2} />
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-all duration-150"
+              style={{ color: '#1D1D1F' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" strokeWidth={2} />
+              <span className="hidden sm:inline">Logout</span>
             </button>
 
             {/* Add Scholar Button */}

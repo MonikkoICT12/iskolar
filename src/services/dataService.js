@@ -2,16 +2,86 @@
  * Data Service Module
  * 
  * Centralizes all data reading/writing operations.
- * Current implementation uses scholarStore (LocalStorage via Zustand).
- * Future: easily swap to database without changing components.
+ * Two modes of operation:
+ * 1. PUBLIC DATA: Uses Supabase RPC functions for landing page (aggregate data only)
+ * 2. ADMIN DATA: Direct access to scholarStore for authenticated admin routes
  */
 
+import { supabase } from '../lib/supabase'
 import useScholarStore from '../store/scholarStore'
 
 // Get the store instance
 const getStore = () => useScholarStore.getState()
 
 export const dataService = {
+  // PUBLIC DATA - for landing page (aggregate only, no personal info)
+  
+  /**
+   * Get public dashboard statistics (aggregate data)
+   * Calls Supabase RPC: public_dashboard_stats
+   * Returns: total_scholars, active_scholars, graduated_scholars, total_schools,
+   *          scholars_per_school, scholars_per_year_level, paid_count, unpaid_count
+   * Fallback: Returns friendly message if RPC not available
+   */
+  getPublicDashboardStats: async () => {
+    try {
+      const { data, error } = await supabase.rpc('public_dashboard_stats')
+      
+      if (error) {
+        console.warn('Public dashboard RPC not available:', error.message)
+        return {
+          available: false,
+          message: 'Data is not available yet',
+        }
+      }
+      
+      return {
+        available: true,
+        ...data,
+      }
+    } catch (err) {
+      console.warn('Error calling public dashboard RPC:', err)
+      return {
+        available: false,
+        message: 'Data is not available yet',
+      }
+    }
+  },
+
+  /**
+   * Get public graduates by school (aggregate data)
+   * Calls Supabase RPC: public_graduates_by_school
+   * Returns: array of {school_name, graduate_count, total_scholarship_amount}
+   * Fallback: Returns friendly message if RPC not available
+   */
+  getPublicGraduatesBySchool: async () => {
+    try {
+      const { data, error } = await supabase.rpc('public_graduates_by_school')
+      
+      if (error) {
+        console.warn('Public graduates RPC not available:', error.message)
+        return {
+          available: false,
+          message: 'Data is not available yet',
+          schools: [],
+        }
+      }
+      
+      return {
+        available: true,
+        schools: data || [],
+      }
+    } catch (err) {
+      console.warn('Error calling public graduates RPC:', err)
+      return {
+        available: false,
+        message: 'Data is not available yet',
+        schools: [],
+      }
+    }
+  },
+
+  // ADMIN DATA - for authenticated routes (full scholar access)
   // Scholars
   getScholars: () => {
     return getStore().getScholarsBySchoolYear()

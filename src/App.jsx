@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './contexts/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
 import ScholarRecords from './components/ScholarRecords'
@@ -12,6 +14,7 @@ import ScholarModal from './components/ScholarModal'
 import HelpModal from './components/HelpModal'
 import Toast from './components/Toast'
 import LandingPage from './components/LandingPage'
+import SignIn from './components/SignIn'
 
 function AdminLayout() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -83,13 +86,42 @@ function AdminLayout() {
 }
 
 function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: '#F5F5F7' }}
+      >
+        <div className="text-center">
+          <div 
+            className="inline-block w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4"
+            style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }}
+          />
+          <p style={{ color: '#AAAAAA' }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <Routes>
-      {/* Landing Page */}
+      {/* Landing Page - Public */}
       <Route path="/" element={<LandingPage />} />
 
-      {/* Admin Routes */}
-      <Route path="/admin" element={<AdminLayout />} />
+      {/* Sign In - Public */}
+      <Route path="/signin" element={<SignIn />} />
+
+      {/* Admin Routes - Protected */}
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        } 
+      />
 
       {/* Catch all - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />

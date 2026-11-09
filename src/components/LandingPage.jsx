@@ -1,16 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Award, Users, GraduationCap, School, TrendingUp } from 'lucide-react'
+import { Award, Users, GraduationCap, School, TrendingUp, AlertCircle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import dataService from '../services/dataService'
 
 const LandingPage = () => {
   const navigate = useNavigate()
-  const [selectedSchoolFilter, setSelectedSchoolFilter] = useState('ALL')
+  const [dashboardData, setDashboardData] = useState(null)
+  const [graduatesData, setGraduatesData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // Get statistics
-  const stats = dataService.getStatistics()
-  const graduatedSchools = dataService.getGraduatedSchools()
+  useEffect(() => {
+    const fetchPublicData = async () => {
+      setLoading(true)
+      try {
+        const [dashboard, graduates] = await Promise.all([
+          dataService.getPublicDashboardStats(),
+          dataService.getPublicGraduatesBySchool(),
+        ])
+        setDashboardData(dashboard)
+        setGraduatesData(graduates)
+      } catch (err) {
+        console.error('Error fetching public data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPublicData()
+  }, [])
 
   // Colors
   const COLORS = {
@@ -23,6 +40,27 @@ const LandingPage = () => {
   }
 
   const PIE_COLORS = [COLORS.success, COLORS.warning]
+
+  // Loading state
+  if (loading) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: COLORS.background }}
+      >
+        <div className="text-center">
+          <div 
+            className="inline-block w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4"
+            style={{ borderColor: COLORS.primary, borderTopColor: 'transparent' }}
+          />
+          <p style={{ color: COLORS.secondary }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Data not available state
+  const dataNotAvailable = !dashboardData?.available || !graduatesData?.available
 
   return (
     <div 
@@ -87,96 +125,92 @@ const LandingPage = () => {
 
       {/* Public Dashboard Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Data Not Available Message */}
+        {dataNotAvailable && (
+          <div 
+            className="mb-8 p-6 rounded-xl flex items-start gap-3"
+            style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)', border: '1px solid #E5E5EA' }}
+          >
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: COLORS.primary }} />
+            <div>
+              <h3 className="font-semibold mb-1" style={{ color: COLORS.text }}>
+                Data is not available yet
+              </h3>
+              <p className="text-sm" style={{ color: COLORS.secondary }}>
+                The public dashboard data will be available once the backend functions are configured.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {/* Total Scholars */}
-          <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
-                <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+        {dashboardData?.available && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {/* Total Scholars */}
+            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                  <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                </div>
               </div>
+              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Total Scholars</p>
+              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_scholars || 0}</p>
             </div>
-            <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Total Scholars</p>
-            <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{stats.totalScholars}</p>
-          </div>
 
-          {/* Active Scholars */}
-          <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                <TrendingUp className="w-6 h-6" style={{ color: COLORS.success }} />
+            {/* Active Scholars */}
+            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                  <TrendingUp className="w-6 h-6" style={{ color: COLORS.success }} />
+                </div>
               </div>
+              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Active Scholars</p>
+              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.active_scholars || 0}</p>
             </div>
-            <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Active Scholars</p>
-            <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{stats.totalActive}</p>
-          </div>
 
-          {/* Graduates */}
-          <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                <GraduationCap className="w-6 h-6" style={{ color: COLORS.success }} />
+            {/* Graduates */}
+            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                  <GraduationCap className="w-6 h-6" style={{ color: COLORS.success }} />
+                </div>
               </div>
+              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Graduates</p>
+              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.graduated_scholars || 0}</p>
             </div>
-            <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Graduates</p>
-            <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{stats.totalGraduated}</p>
-          </div>
 
-          {/* Number of Schools */}
-          <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
-                <School className="w-6 h-6" style={{ color: COLORS.primary }} />
+            {/* Number of Schools */}
+            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                  <School className="w-6 h-6" style={{ color: COLORS.primary }} />
+                </div>
               </div>
+              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Schools</p>
+              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_schools || 0}</p>
             </div>
-            <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Schools</p>
-            <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{stats.totalSchools}</p>
           </div>
-        </div>
+        )}
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-          {/* Scholars per School */}
-          <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-            <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.text }}>
-              Scholars per School
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.schoolStats.slice(0, 10)} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
-                <XAxis type="number" stroke={COLORS.secondary} style={{ fontSize: '12px' }} />
-                <YAxis 
-                  type="category" 
-                  dataKey="school" 
-                  stroke={COLORS.secondary} 
-                  style={{ fontSize: '12px' }}
-                  width={150}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#FFFFFF', 
-                    border: '1px solid #E5E5EA',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Bar dataKey="count" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Scholars per Year Level & Paid/Unpaid */}
-          <div className="space-y-6">
-            {/* Scholars per Year Level */}
+        {dashboardData?.available && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+            {/* Scholars per School */}
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
               <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.text }}>
-                Scholars per Year Level
+                Scholars per School
               </h3>
-              <ResponsiveContainer width="100%" height={140}>
-                <BarChart data={stats.yearLevelStats}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={(dashboardData.scholars_per_school || []).slice(0, 10)} layout="horizontal">
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
-                  <XAxis dataKey="yearLevel" stroke={COLORS.secondary} style={{ fontSize: '12px' }} />
-                  <YAxis stroke={COLORS.secondary} style={{ fontSize: '12px' }} />
+                  <XAxis type="number" stroke={COLORS.secondary} style={{ fontSize: '12px' }} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="school_name" 
+                    stroke={COLORS.secondary} 
+                    style={{ fontSize: '12px' }}
+                    width={150}
+                  />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#FFFFFF', 
@@ -185,35 +219,23 @@ const LandingPage = () => {
                       fontSize: '12px'
                     }}
                   />
-                  <Bar dataKey="count" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Paid vs Unpaid */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.text }}>
-                Payment Status
-              </h3>
-              <div className="flex items-center justify-center">
+            {/* Scholars per Year Level & Paid/Unpaid */}
+            <div className="space-y-6">
+              {/* Scholars per Year Level */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.text }}>
+                  Scholars per Year Level
+                </h3>
                 <ResponsiveContainer width="100%" height={140}>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Paid', value: stats.paidCount },
-                        { name: 'Processing', value: stats.unpaidCount },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={60}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {PIE_COLORS.map((color, index) => (
-                        <Cell key={`cell-${index}`} fill={color} />
-                      ))}
-                    </Pie>
+                  <BarChart data={dashboardData.scholars_per_year_level || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
+                    <XAxis dataKey="year_level" stroke={COLORS.secondary} style={{ fontSize: '12px' }} />
+                    <YAxis stroke={COLORS.secondary} style={{ fontSize: '12px' }} />
                     <Tooltip 
                       contentStyle={{ 
                         backgroundColor: '#FFFFFF', 
@@ -222,90 +244,140 @@ const LandingPage = () => {
                         fontSize: '12px'
                       }}
                     />
-                    <Legend 
-                      verticalAlign="middle" 
-                      align="right"
-                      layout="vertical"
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: '12px' }}
-                    />
-                  </PieChart>
+                    <Bar dataKey="count" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
+              </div>
+
+              {/* Paid vs Unpaid */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.text }}>
+                  Payment Status
+                </h3>
+                <div className="flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height={140}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Paid', value: dashboardData.paid_count || 0 },
+                          { name: 'Processing', value: dashboardData.unpaid_count || 0 },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {PIE_COLORS.map((color, index) => (
+                          <Cell key={`cell-${index}`} fill={color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#FFFFFF', 
+                          border: '1px solid #E5E5EA',
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Legend 
+                        verticalAlign="middle" 
+                        align="right"
+                        layout="vertical"
+                        iconType="circle"
+                        wrapperStyle={{ fontSize: '12px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Graduates Section */}
         <div className="bg-white rounded-xl shadow-sm p-8" style={{ border: '1px solid #E5E5EA' }}>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.text }}>
-                Graduates
-              </h2>
-              <p className="text-sm" style={{ color: COLORS.secondary }}>
-                Celebrating our scholars who have completed their studies
-              </p>
-            </div>
-            
-            {/* School Filter */}
-            {graduatedSchools.length > 0 && (
-              <select
-                value={selectedSchoolFilter}
-                onChange={(e) => setSelectedSchoolFilter(e.target.value)}
-                className="px-4 py-2 rounded-lg text-sm"
-                style={{ border: '1px solid #E5E5EA', color: COLORS.text }}
-              >
-                <option value="ALL">All Schools</option>
-                {graduatedSchools.map(school => (
-                  <option key={school} value={school}>{school}</option>
-                ))}
-              </select>
-            )}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.text }}>
+              Graduates
+            </h2>
+            <p className="text-sm" style={{ color: COLORS.secondary }}>
+              Celebrating our scholars who have completed their studies
+            </p>
           </div>
 
-          {/* Graduates List */}
-          {graduatedSchools.length === 0 ? (
+          {/* Overall Totals */}
+          {graduatesData?.available && graduatesData.schools.length > 0 && (
+            <div 
+              className="mb-8 p-6 rounded-xl"
+              style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>
+                    Total Graduated Scholars
+                  </p>
+                  <p className="text-3xl font-bold" style={{ color: COLORS.text }}>
+                    {graduatesData.schools.reduce((sum, school) => sum + (school.graduate_count || 0), 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>
+                    Total Scholarship Money
+                  </p>
+                  <p className="text-3xl font-bold" style={{ color: COLORS.success }}>
+                    PHP {graduatesData.schools
+                      .reduce((sum, school) => sum + (school.total_scholarship_amount || 0), 0)
+                      .toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Graduates by School - Aggregate Only (NO NAMES) */}
+          {!graduatesData?.available || graduatesData.schools.length === 0 ? (
             <div className="text-center py-12">
               <GraduationCap className="w-16 h-16 mx-auto mb-4 opacity-20" style={{ color: COLORS.secondary }} />
               <p style={{ color: COLORS.secondary }}>No graduates yet.</p>
             </div>
           ) : (
-            <div className="space-y-8">
-              {graduatedSchools
-                .filter(school => selectedSchoolFilter === 'ALL' || school === selectedSchoolFilter)
-                .map((school, index) => {
-                  const graduates = dataService.getGraduatedScholarsBySchool(school)
-                  return (
-                    <div key={index}>
-                      <div className="flex items-center gap-3 mb-4">
-                        <GraduationCap className="w-5 h-5" style={{ color: COLORS.success }} />
-                        <h3 className="text-lg font-bold" style={{ color: COLORS.text }}>
-                          {school}
-                        </h3>
-                        <span className="text-sm" style={{ color: COLORS.secondary }}>
-                          ({graduates.length} {graduates.length === 1 ? 'graduate' : 'graduates'})
-                        </span>
+            <div className="space-y-4">
+              {graduatesData.schools
+                .sort((a, b) => (a.school_name || '').localeCompare(b.school_name || ''))
+                .map((school, index) => (
+                  <div 
+                    key={index}
+                    className="p-6 rounded-lg"
+                    style={{ backgroundColor: COLORS.background, border: '1px solid #E5E5EA' }}
+                  >
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <GraduationCap className="w-5 h-5 flex-shrink-0" style={{ color: COLORS.success }} />
+                          <h3 className="text-lg font-bold" style={{ color: COLORS.text }}>
+                            {school.school_name}
+                          </h3>
+                        </div>
+                        <p className="text-sm" style={{ color: COLORS.secondary }}>
+                          {school.graduate_count} {school.graduate_count === 1 ? 'graduated scholar' : 'graduated scholars'}
+                        </p>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {graduates.map((graduate, idx) => (
-                          <div 
-                            key={idx} 
-                            className="p-4 rounded-lg"
-                            style={{ backgroundColor: COLORS.background, border: '1px solid #E5E5EA' }}
-                          >
-                            <p className="font-semibold" style={{ color: COLORS.text }}>
-                              {graduate.firstName} {graduate.lastName}
-                            </p>
-                            <p className="text-sm mt-1" style={{ color: COLORS.secondary }}>
-                              Graduated {graduate.yearGraduated || 'N/A'}
-                            </p>
-                          </div>
-                        ))}
+                      <div className="text-right">
+                        <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>
+                          Total Scholarship
+                        </p>
+                        <p className="text-xl font-bold" style={{ color: COLORS.success }}>
+                          PHP {(school.total_scholarship_amount || 0).toLocaleString('en-PH', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </p>
                       </div>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
             </div>
           )}
         </div>

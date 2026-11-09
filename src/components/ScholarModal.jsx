@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import useScholarStore, { BARANGAYS, YEAR_LEVELS, SEMESTERS } from '../store/scholarStore'
 
 const ScholarModal = ({ scholar, onClose }) => {
-  const { addScholar, updateScholar, getSchoolsList } = useScholarStore()
+  const { addScholar, updateScholar, getAllSchoolsList } = useScholarStore()
   const isEditing = !!scholar
 
   const [formData, setFormData] = useState({
@@ -30,7 +30,7 @@ const ScholarModal = ({ scholar, onClose }) => {
   const [filteredSchools, setFilteredSchools] = useState([])
 
   // Get existing schools from the system
-  const existingSchools = getSchoolsList()
+  const existingSchools = getAllSchoolsList()
 
   // Lock body scroll when modal is open
   useEffect(() => {

@@ -135,6 +135,12 @@ const useScholarStore = create(
         return schools.sort()
       },
 
+      getAllSchoolsList: () => {
+        const allScholars = get().scholars.filter(s => s.schoolYear === get().currentSchoolYear)
+        const schools = [...new Set(allScholars.map((s) => s.school))]
+        return schools.sort()
+      },
+
       getScholarsBySchool: (school) => {
         return get()
           .getActiveScholars() // Only active scholars

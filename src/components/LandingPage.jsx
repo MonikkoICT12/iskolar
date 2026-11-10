@@ -189,6 +189,42 @@ const LandingPage = () => {
               <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Schools</p>
               <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_schools || 0}</p>
             </div>
+
+            {/* PWD Scholars */}
+            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                  <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                </div>
+              </div>
+              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>PWD Scholars</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.pwd_count || 0}</p>
+                <p className="text-sm" style={{ color: COLORS.secondary }}>
+                  ({dashboardData.total_scholars > 0 
+                    ? ((dashboardData.pwd_count || 0) / dashboardData.total_scholars * 100).toFixed(1)
+                    : 0}%)
+                </p>
+              </div>
+            </div>
+
+            {/* Solo Parent Scholars */}
+            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                  <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                </div>
+              </div>
+              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Solo Parent Scholars</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.solo_parent_count || 0}</p>
+                <p className="text-sm" style={{ color: COLORS.secondary }}>
+                  ({dashboardData.total_scholars > 0 
+                    ? ((dashboardData.solo_parent_count || 0) / dashboardData.total_scholars * 100).toFixed(1)
+                    : 0}%)
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

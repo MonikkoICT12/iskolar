@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Eye, X, GraduationCap } from 'lucide-react'
+import { Search, Eye, X, GraduationCap, RotateCcw } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 
 const GraduatesTab = () => {
@@ -8,12 +8,15 @@ const GraduatesTab = () => {
     getGraduatedSchoolsList,
     getGraduatedScholarsBySchool,
     getGraduationYears,
+    returnToActive,
   } = useScholarStore()
   
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [yearFilter, setYearFilter] = useState('ALL')
+  const [confirmReturnModal, setConfirmReturnModal] = useState(false)
+  const [scholarToReturn, setScholarToReturn] = useState(null)
 
   const schools = getGraduatedSchoolsList() // Schools with graduated scholars
 
@@ -24,9 +27,27 @@ const GraduatesTab = () => {
     setViewModalOpen(true)
   }
 
+  const handleReturnToActive = (scholar) => {
+    setScholarToReturn(scholar)
+    setConfirmReturnModal(true)
+  }
+
+  const confirmReturn = () => {
+    if (scholarToReturn) {
+      returnToActive(scholarToReturn.id)
+      setConfirmReturnModal(false)
+      setScholarToReturn(null)
+      // Close view modal if no more graduates for this school
+      const remainingGraduates = getGraduatedScholarsBySchool(selectedSchool)
+      if (remainingGraduates.length === 0) {
+        setViewModalOpen(false)
+      }
+    }
+  }
+
   // Lock body scroll when modal is open
   useEffect(() => {
-    if (viewModalOpen) {
+    if (viewModalOpen || confirmReturnModal) {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
       document.body.style.overflow = 'hidden'
       document.body.style.paddingRight = `${scrollbarWidth}px`
@@ -36,7 +57,7 @@ const GraduatesTab = () => {
         document.body.style.paddingRight = ''
       }
     }
-  }, [viewModalOpen])
+  }, [viewModalOpen, confirmReturnModal])
 
   return (
     <div>
@@ -219,6 +240,9 @@ const GraduatesTab = () => {
                     <th className="px-6 py-3 text-center text-xs font-semibold" style={{ color: '#1D1D1F' }}>
                       Year Graduated
                     </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold" style={{ color: '#1D1D1F' }}>
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -247,6 +271,24 @@ const GraduatesTab = () => {
                         <td className="px-6 py-3 text-center text-sm font-semibold" style={{ color: '#10b981' }}>
                           {scholar.yearGraduated || '-'}
                         </td>
+                        <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleReturnToActive(scholar)}
+                              className="p-2 rounded-lg transition-all duration-150"
+                              style={{ color: '#007AFF' }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(0, 122, 255, 0.1)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent'
+                              }}
+                              title="Return to Active"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -266,6 +308,96 @@ const GraduatesTab = () => {
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Return to Active Confirmation Modal */}
+      {confirmReturnModal && scholarToReturn && createPortal(
+        <div 
+          className="fixed z-[110]" 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConfirmReturnModal(false)
+              setScholarToReturn(null)
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: '#E5E5EA' }}>
+              <h3 className="text-xl font-semibold" style={{ color: '#1D1D1F' }}>
+                Return to Active Status
+              </h3>
+              <button
+                onClick={() => {
+                  setConfirmReturnModal(false)
+                  setScholarToReturn(null)
+                }}
+                className="p-2 rounded-lg transition-all"
+                style={{ color: '#AAAAAA' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6">
+              <p className="mb-4" style={{ color: '#1D1D1F' }}>
+                Return <strong>{scholarToReturn.firstName} {scholarToReturn.lastName}</strong> to active status?
+              </p>
+              <p className="text-sm" style={{ color: '#AAAAAA' }}>
+                This scholar will be removed from Graduates and returned to the Scholars tab.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: '#E5E5EA' }}>
+              <button
+                onClick={() => {
+                  setConfirmReturnModal(false)
+                  setScholarToReturn(null)
+                }}
+                className="px-4 py-2 rounded-lg font-medium transition-all"
+                style={{ 
+                  backgroundColor: '#F5F5F7',
+                  color: '#1D1D1F',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E5EA'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReturn}
+                className="px-4 py-2 rounded-lg font-medium transition-all"
+                style={{ 
+                  backgroundColor: '#007AFF',
+                  color: '#FFFFFF',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
+              >
+                Confirm Return
               </button>
             </div>
           </div>

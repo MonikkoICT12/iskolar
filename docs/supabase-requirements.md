@@ -27,9 +27,11 @@ The main table storing all scholar information.
 | `lastName` | TEXT | Yes | Scholar's last name |
 | `school` | TEXT | Yes | Name of the university/school |
 | `course` | TEXT | No | Academic program/course |
-| `yearLevel` | TEXT | No | Year level (e.g., "1st Year", "2nd Year") |
+| `yearLevel` | TEXT | No | Year level (e.g., "1st Year" up to "6th Year") |
 | `scholarStatus` | TEXT | Yes | Status: "Active" or "Graduated" |
 | `yearGraduated` | TEXT | No | Year of graduation (required if scholarStatus is "Graduated") |
+| `is_pwd` | BOOLEAN | Yes (default false) | Person with Disability status |
+| `is_solo_parent` | BOOLEAN | Yes (default false) | Solo Parent status |
 | `scholarship_amount` | NUMERIC | Yes (default 0) | Total scholarship amount received (in PHP, not null, default 0) |
 | `status` | TEXT | No | Payment status: "Paid" or "Processing" |
 | `contact` | TEXT | No | Contact information |
@@ -43,6 +45,30 @@ The main table storing all scholar information.
 - When `scholarStatus` is "Graduated", `yearGraduated` should be populated
 - `scholarship_amount` stores the total scholarship money in PHP currency (NUMERIC, NOT NULL, DEFAULT 0)
 - Existing records without scholarship_amount are treated as 0 until edited by admin
+- `yearLevel` accepts "1st Year" through "6th Year" (no longer limited to 1-4)
+- `is_pwd` and `is_solo_parent` are boolean fields for classification and reporting
+
+---
+
+### Table: `scholar_grades`
+
+Stores grade entries for each scholar (admin-only access).
+
+#### Columns:
+
+| Column Name | Data Type | Required | Description |
+|-------------|-----------|----------|-------------|
+| `id` | UUID | Yes | Primary key, auto-generated |
+| `scholar_id` | UUID | Yes | Foreign key to scholars.id, ON DELETE CASCADE |
+| `school_year` | TEXT | Yes | School year (e.g., "2026-2027") |
+| `semester` | TEXT | Yes | Semester (e.g., "1st Semester", "2nd Semester", "Summer") |
+| `gwa` | NUMERIC(3,2) | Yes | General Weighted Average (e.g., 1.75) |
+| `created_at` | TIMESTAMP | Yes | Record creation timestamp (auto-generated) |
+
+#### Notes:
+- GWA scale: 1.00 (highest) to 5.00 (lowest), two decimal places
+- This table is NOT accessible by anonymous users (RLS: admin-only)
+- Used to track academic performance over time
 
 ---
 
@@ -64,6 +90,8 @@ These functions must be callable using the **anonymous key** (public access). Th
   "active_scholars": 120,
   "graduated_scholars": 30,
   "total_schools": 8,
+  "pwd_count": 12,
+  "solo_parent_count": 8,
   "scholars_per_school": [
     {
       "school_name": "Nueva Ecija University of Science and Technology",
@@ -100,8 +128,10 @@ These functions must be callable using the **anonymous key** (public access). Th
 **Implementation Notes:**
 - Count only scholars with `scholarStatus = 'Active'` for active_scholars
 - Count only scholars with `scholarStatus = 'Graduated'` for graduated_scholars
+- `pwd_count`: count scholars where `is_pwd = true`
+- `solo_parent_count`: count scholars where `is_solo_parent = true`
 - `scholars_per_school` should include all schools, sorted by count (descending)
-- `scholars_per_year_level` should count active scholars only
+- `scholars_per_year_level` should count active scholars only, include all year levels (1st through 6th)
 - `paid_count`: scholars with `status = 'Paid'`
 - `unpaid_count`: scholars with `status = 'Processing'`
 
@@ -147,8 +177,9 @@ These functions must be callable using the **anonymous key** (public access). Th
 - **NO direct access** to the `scholars` table
 - Public users can ONLY call the two RPC functions above
 
-**Admin Access (Authenticated Users):**
+### Admin Access (Authenticated Users):**
 - **Full CRUD access** to all rows in the `scholars` table
+- **Full access** to `scholar_grades` table (read, create, update, delete)
 - Admins can SELECT, INSERT, UPDATE, DELETE
 
 #### Sample RLS Policies:
@@ -157,9 +188,19 @@ These functions must be callable using the **anonymous key** (public access). Th
 -- Public: No direct access to scholars table
 -- (RPC functions are public but the table is not)
 
+-- Public: No access to scholar_grades table
+-- (grades are never shown on public landing page)
+
 -- Admin: Full access for authenticated users
-CREATE POLICY "Admins can do everything"
+CREATE POLICY "Admins can do everything on scholars"
 ON scholars
+FOR ALL
+TO authenticated
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Admins can do everything on grades"
+ON scholar_grades
 FOR ALL
 TO authenticated
 USING (true)
@@ -245,7 +286,9 @@ BEGIN
       ) year_levels
     ),
     'paid_count', (SELECT COUNT(*) FROM scholars WHERE status = 'Paid'),
-    'unpaid_count', (SELECT COUNT(*) FROM scholars WHERE status = 'Processing')
+    'unpaid_count', (SELECT COUNT(*) FROM scholars WHERE status = 'Processing'),
+    'pwd_count', (SELECT COUNT(*) FROM scholars WHERE is_pwd = true),
+    'solo_parent_count', (SELECT COUNT(*) FROM scholars WHERE is_solo_parent = true)
   )
   INTO result;
   

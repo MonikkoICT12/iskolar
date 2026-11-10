@@ -7,10 +7,6 @@ const BARANGAYS = [
   'Singalat', 'Poblacion', 'Other'
 ]
 
-const YEAR_LEVELS = [
-  '1st Year', '2nd Year', '3rd Year', '4th Year'
-]
-
 const SEMESTERS = [
   '1st Sem', '2nd Sem'
 ]
@@ -34,6 +30,9 @@ const useScholarStore = create(
           scholarStatus: scholar.scholarStatus || 'Active', // Default to Active
           yearGraduated: scholar.yearGraduated || null,
           scholarship_amount: scholar.scholarship_amount || 0, // Default to 0
+          is_pwd: scholar.is_pwd || false, // Default to false
+          is_solo_parent: scholar.is_solo_parent || false, // Default to false
+          grades: scholar.grades || [], // Default to empty array
         }
         set((state) => ({
           scholars: [...state.scholars, newScholar],
@@ -62,17 +61,28 @@ const useScholarStore = create(
         get().showToast(`${count} scholar${count === 1 ? '' : 's'} updated successfully!`, 'success')
       },
 
-      bulkMarkAsGraduated: (ids) => {
-        const currentYear = new Date().getFullYear()
+      bulkMarkAsGraduated: (ids, yearGraduated = null) => {
+        const year = yearGraduated || new Date().getFullYear()
         set((state) => ({
           scholars: state.scholars.map((s) =>
             ids.includes(s.id) 
-              ? { ...s, scholarStatus: 'Graduated', yearGraduated: currentYear, updatedAt: new Date().toISOString() } 
+              ? { ...s, scholarStatus: 'Graduated', yearGraduated: year, updatedAt: new Date().toISOString() } 
               : s
           ),
         }))
         const count = ids.length
         get().showToast(`${count} scholar${count === 1 ? '' : 's'} marked as graduated!`, 'success')
+      },
+
+      returnToActive: (id) => {
+        set((state) => ({
+          scholars: state.scholars.map((s) =>
+            s.id === id 
+              ? { ...s, scholarStatus: 'Active', yearGraduated: null, updatedAt: new Date().toISOString() } 
+              : s
+          ),
+        }))
+        get().showToast('Scholar returned to active status!', 'success')
       },
 
       deleteScholar: (id) => {
@@ -154,11 +164,11 @@ const useScholarStore = create(
           .filter((s) => s.yearLevel === yearLevel)
       },
 
-      getYearLevelStats: () => {
+      getYearLevelStats: (yearLevels) => {
         const scholars = get().getScholarsBySchoolYear()
         const stats = {}
         
-        YEAR_LEVELS.forEach((level) => {
+        yearLevels.forEach((level) => {
           const count = scholars.filter((s) => s.yearLevel === level).length
           const amount = scholars
             .filter((s) => s.yearLevel === level)
@@ -321,16 +331,7 @@ const useScholarStore = create(
         }
       },
 
-      clearAllData: () => {
-        if (
-          window.confirm(
-            'Are you sure you want to delete ALL scholar records? This cannot be undone!'
-          )
-        ) {
-          set({ scholars: [] })
-          get().showToast('All data cleared!', 'warning')
-        }
-      },
+
     }),
     {
       name: 'iskolar-storage',
@@ -338,5 +339,5 @@ const useScholarStore = create(
   )
 )
 
-export { BARANGAYS, YEAR_LEVELS, SEMESTERS }
+export { BARANGAYS, SEMESTERS }
 export default useScholarStore

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Search, Edit2, Trash2, Eye, UserPlus, CheckSquare, Square, MinusSquare, X } from 'lucide-react'
-import useScholarStore, { BARANGAYS, YEAR_LEVELS, SEMESTERS } from '../store/scholarStore'
+import useScholarStore, { BARANGAYS, SEMESTERS } from '../store/scholarStore'
+import { YEAR_LEVELS } from '../config/yearLevels'
+import { formatGWA, isGWAWarning } from '../config/grading'
 import ConfirmModal from './ConfirmModal'
 
 const ScholarRecords = ({ onEditScholar }) => {
@@ -12,13 +14,15 @@ const ScholarRecords = ({ onEditScholar }) => {
   const [filterYear, setFilterYear] = useState('ALL')
   const [filterSemester, setFilterSemester] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
-  const [filterScholarStatus, setFilterScholarStatus] = useState('Active') // Default to Active only
+  const [filterPWD, setFilterPWD] = useState('ALL')
+  const [filterSoloParent, setFilterSoloParent] = useState('ALL')
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scholar: null })
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkPaidConfirm, setBulkPaidConfirm] = useState(false)
   const [bulkGraduatedConfirm, setBulkGraduatedConfirm] = useState(false)
 
-  const allScholars = getScholarsBySchoolYear()
+  // Show only ACTIVE scholars
+  const allScholars = getActiveScholars()
   const schools = getSchoolsList()
 
   const filteredScholars = allScholars.filter((scholar) => {
@@ -34,18 +38,28 @@ const ScholarRecords = ({ onEditScholar }) => {
     const matchesYear = filterYear === 'ALL' || scholar.yearLevel === filterYear
     const matchesSemester = filterSemester === 'ALL' || scholar.semester === filterSemester
     const matchesStatus = filterStatus === 'ALL' || scholar.status === filterStatus
-    
-    // Scholar status filter (treat missing as Active)
-    const scholarStatus = scholar.scholarStatus || 'Active'
-    const matchesScholarStatus = filterScholarStatus === 'ALL' || scholarStatus === filterScholarStatus
+    const matchesPWD = filterPWD === 'ALL' || (filterPWD === 'Yes' ? scholar.is_pwd === true : scholar.is_pwd === false)
+    const matchesSoloParent = filterSoloParent === 'ALL' || (filterSoloParent === 'Yes' ? scholar.is_solo_parent === true : scholar.is_solo_parent === false)
 
-    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus && matchesScholarStatus
+    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus && matchesPWD && matchesSoloParent
   })
 
   // Reset selection when filters or search changes
   useEffect(() => {
     setSelectedIds([])
-  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus, filterScholarStatus])
+  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus, filterPWD, filterSoloParent])
+
+  // Helper function to get latest GWA
+  const getLatestGWA = (scholar) => {
+    if (!scholar.grades || scholar.grades.length === 0) return null
+    const sorted = [...scholar.grades].sort((a, b) => {
+      if (a.schoolYear !== b.schoolYear) {
+        return b.schoolYear.localeCompare(a.schoolYear)
+      }
+      return (b.createdAt || '').localeCompare(a.createdAt || '')
+    })
+    return sorted[0].gwa
+  }
 
   // Selection handlers
   const handleSelectAll = () => {
@@ -262,14 +276,25 @@ const ScholarRecords = ({ onEditScholar }) => {
             </select>
 
             <select
-              value={filterScholarStatus}
-              onChange={(e) => setFilterScholarStatus(e.target.value)}
+              value={filterPWD}
+              onChange={(e) => setFilterPWD(e.target.value)}
               className="rounded-lg text-xs py-2 px-3"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
-              <option value="Active">Active</option>
-              <option value="Graduated">Graduated</option>
-              <option value="ALL">All Scholars</option>
+              <option value="ALL">All PWD</option>
+              <option value="Yes">PWD: Yes</option>
+              <option value="No">PWD: No</option>
+            </select>
+
+            <select
+              value={filterSoloParent}
+              onChange={(e) => setFilterSoloParent(e.target.value)}
+              className="rounded-lg text-xs py-2 px-3"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
+            >
+              <option value="ALL">All Solo Parent</option>
+              <option value="Yes">Solo Parent: Yes</option>
+              <option value="No">Solo Parent: No</option>
             </select>
           </div>
         </div>
@@ -299,6 +324,7 @@ const ScholarRecords = ({ onEditScholar }) => {
                 <th className="py-3 px-4">Scholar Name</th>
                 <th className="py-3 px-4">Barangay</th>
                 <th className="py-3 px-4">School</th>
+                <th className="py-3 px-4">Latest GWA</th>
                 <th className="py-3 px-4">Year Level</th>
                 <th className="py-3 px-4">Semester</th>
                 <th className="py-3 px-4">Course / Program</th>
@@ -362,6 +388,23 @@ const ScholarRecords = ({ onEditScholar }) => {
                     <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.barangay}</td>
                     <td className="py-3 px-4 text-xs max-w-xs truncate" style={{ color: '#AAAAAA' }}>
                       {scholar.school}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {(() => {
+                        const latestGWA = getLatestGWA(scholar)
+                        if (!latestGWA) {
+                          return <span className="text-xs" style={{ color: '#AAAAAA' }}>No grades yet</span>
+                        }
+                        const isWarning = isGWAWarning(latestGWA)
+                        return (
+                          <span 
+                            className={`text-sm font-bold ${isWarning ? 'text-red-600' : ''}`}
+                            style={!isWarning ? { color: '#10b981' } : {}}
+                          >
+                            {formatGWA(latestGWA)}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.yearLevel}</td>
                     <td className="py-3 px-4">

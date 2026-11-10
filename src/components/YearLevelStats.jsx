@@ -1,5 +1,6 @@
 import { TrendingUp, Users } from 'lucide-react'
-import useScholarStore, { YEAR_LEVELS } from '../store/scholarStore'
+import useScholarStore from '../store/scholarStore'
+import { YEAR_LEVELS } from '../config/yearLevels'
 import { YEAR_LEVEL_COLORS, formatCurrency } from '../utils/helpers'
 
 const YearLevelStats = () => {

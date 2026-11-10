@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
-import useScholarStore, { BARANGAYS, YEAR_LEVELS, SEMESTERS } from '../store/scholarStore'
+import { X, Trash2, Plus } from 'lucide-react'
+import useScholarStore, { BARANGAYS, SEMESTERS } from '../store/scholarStore'
+import { YEAR_LEVELS } from '../config/yearLevels'
+import { GRADING_CONFIG, validateGWA, formatGWA, isGWAWarning } from '../config/grading'
+import GraduateConfirmModal from './GraduateConfirmModal'
 
 const ScholarModal = ({ scholar, onClose }) => {
-  const { addScholar, updateScholar, getAllSchoolsList } = useScholarStore()
+  const { addScholar, updateScholar, getAllSchoolsList, bulkMarkAsGraduated } = useScholarStore()
   const isEditing = !!scholar
 
   const [formData, setFormData] = useState({
@@ -23,9 +26,13 @@ const ScholarModal = ({ scholar, onClose }) => {
     scholarship_amount: '',
     contactNumber: '',
     email: '',
+    is_pwd: false,
+    is_solo_parent: false,
+    grades: [],
     ...scholar,
   })
 
+  const [showGraduateModal, setShowGraduateModal] = useState(false)
   const [scholarshipAmountDisplay, setScholarshipAmountDisplay] = useState('')
   const [scholarshipAmountError, setScholarshipAmountError] = useState('')
 
@@ -35,6 +42,63 @@ const ScholarModal = ({ scholar, onClose }) => {
 
   // Get existing schools from the system
   const existingSchools = getAllSchoolsList()
+
+  // Grade entry state
+  const [newGrade, setNewGrade] = useState({
+    schoolYear: '',
+    semester: GRADING_CONFIG.SEMESTERS[0],
+    gwa: ''
+  })
+  const [gradeError, setGradeError] = useState('')
+
+  const handleAddGrade = () => {
+    if (!newGrade.schoolYear || !newGrade.semester || !newGrade.gwa) {
+      setGradeError('Please fill in all grade fields')
+      return
+    }
+
+    const validation = validateGWA(newGrade.gwa)
+    if (!validation.valid) {
+      setGradeError(validation.error)
+      return
+    }
+
+    const gradeEntry = {
+      schoolYear: newGrade.schoolYear,
+      semester: newGrade.semester,
+      gwa: parseFloat(newGrade.gwa),
+      createdAt: new Date().toISOString()
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      grades: [...(prev.grades || []), gradeEntry]
+    }))
+
+    setNewGrade({
+      schoolYear: '',
+      semester: GRADING_CONFIG.SEMESTERS[0],
+      gwa: ''
+    })
+    setGradeError('')
+  }
+
+  const handleRemoveGrade = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      grades: prev.grades.filter((_, idx) => idx !== index)
+    }))
+  }
+
+  const handleGraduateClick = () => {
+    setShowGraduateModal(true)
+  }
+
+  const handleGraduateConfirm = (year) => {
+    bulkMarkAsGraduated([scholar.id], year)
+    setShowGraduateModal(false)
+    onClose()
+  }
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -607,34 +671,233 @@ const ScholarModal = ({ scholar, onClose }) => {
             </div>
           </div>
 
+          {/* PWD and Solo Parent */}
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
+              Additional Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
+                  PWD (Person with Disability)
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="is_pwd"
+                      checked={formData.is_pwd === true}
+                      onChange={() => setFormData(prev => ({ ...prev, is_pwd: true }))}
+                      className="w-4 h-4"
+                      style={{ accentColor: '#007AFF' }}
+                    />
+                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Yes</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="is_pwd"
+                      checked={formData.is_pwd === false}
+                      onChange={() => setFormData(prev => ({ ...prev, is_pwd: false }))}
+                      className="w-4 h-4"
+                      style={{ accentColor: '#007AFF' }}
+                    />
+                    <span className="text-sm" style={{ color: '#1D1D1F' }}>No</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
+                  Solo Parent
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="is_solo_parent"
+                      checked={formData.is_solo_parent === true}
+                      onChange={() => setFormData(prev => ({ ...prev, is_solo_parent: true }))}
+                      className="w-4 h-4"
+                      style={{ accentColor: '#007AFF' }}
+                    />
+                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Yes</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="is_solo_parent"
+                      checked={formData.is_solo_parent === false}
+                      onChange={() => setFormData(prev => ({ ...prev, is_solo_parent: false }))}
+                      className="w-4 h-4"
+                      style={{ accentColor: '#007AFF' }}
+                    />
+                    <span className="text-sm" style={{ color: '#1D1D1F' }}>No</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Grades */}
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
+              Grades (Optional)
+            </h3>
+            
+            {/* Existing Grades */}
+            {formData.grades && formData.grades.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-semibold" style={{ color: '#AAAAAA' }}>Grade History</p>
+                {formData.grades
+                  .sort((a, b) => b.schoolYear.localeCompare(a.schoolYear) || (b.createdAt || '').localeCompare(a.createdAt || ''))
+                  .map((grade, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
+                        {grade.schoolYear} - {grade.semester}
+                      </p>
+                      <p className={`text-lg font-bold ${isGWAWarning(grade.gwa) ? 'text-red-600' : ''}`} style={!isGWAWarning(grade.gwa) ? { color: '#10b981' } : {}}>
+                        GWA: {formatGWA(grade.gwa)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGrade(index)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add New Grade */}
+            <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E5EA' }}>
+              <p className="text-xs font-semibold mb-3" style={{ color: '#1D1D1F' }}>Add Grade Entry</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                    School Year
+                  </label>
+                  <input
+                    type="text"
+                    value={newGrade.schoolYear}
+                    onChange={(e) => setNewGrade(prev => ({ ...prev, schoolYear: e.target.value }))}
+                    placeholder="2026-2027"
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ border: '1px solid #E5E5EA' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                    Semester
+                  </label>
+                  <select
+                    value={newGrade.semester}
+                    onChange={(e) => setNewGrade(prev => ({ ...prev, semester: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ border: '1px solid #E5E5EA' }}
+                  >
+                    {GRADING_CONFIG.SEMESTERS.map((sem) => (
+                      <option key={sem} value={sem}>{sem}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                    GWA (1.00 - 5.00)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={GRADING_CONFIG.MIN_GWA}
+                    max={GRADING_CONFIG.MAX_GWA}
+                    value={newGrade.gwa}
+                    onChange={(e) => setNewGrade(prev => ({ ...prev, gwa: e.target.value }))}
+                    placeholder="1.75"
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ border: '1px solid #E5E5EA' }}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={handleAddGrade}
+                    className="w-full px-4 py-2 text-sm font-semibold text-white rounded-lg transition flex items-center justify-center gap-2"
+                    style={{ backgroundColor: '#10b981' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                </div>
+              </div>
+              {gradeError && (
+                <p className="text-xs mt-2 text-red-600">{gradeError}</p>
+              )}
+              <p className="text-xs mt-2" style={{ color: '#AAAAAA' }}>
+                Scale: 1.00 (Highest) to 5.00 (Lowest). Grades above {GRADING_CONFIG.GWA_WARNING} will be highlighted.
+              </p>
+            </div>
+          </div>
+
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: '#E5E5EA' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold rounded-lg transition"
-              style={{ 
-                color: '#1D1D1F',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E5E5EA'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 text-sm font-semibold text-white rounded-lg transition shadow"
-              style={{ backgroundColor: '#007AFF' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
-            >
-              {isEditing ? 'Update Scholar' : 'Add Scholar'}
-            </button>
+          <div className="flex items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: '#E5E5EA' }}>
+            <div>
+              {isEditing && formData.scholarStatus !== 'Graduated' && (
+                <button
+                  type="button"
+                  onClick={handleGraduateClick}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg transition"
+                  style={{
+                    color: '#FFFFFF',
+                    backgroundColor: '#10b981',
+                    border: '1px solid #10b981'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                >
+                  Graduate
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-semibold rounded-lg transition"
+                style={{ 
+                  color: '#1D1D1F',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E5E5EA'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 text-sm font-semibold text-white rounded-lg transition shadow"
+                style={{ backgroundColor: '#007AFF' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
+              >
+                {isEditing ? 'Update Scholar' : 'Add Scholar'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
+      {showGraduateModal && (
+        <GraduateConfirmModal
+          scholar={scholar}
+          onConfirm={handleGraduateConfirm}
+          onCancel={() => setShowGraduateModal(false)}
+        />
+      )}
     </div>,
     document.body
   )

@@ -9,6 +9,7 @@
 
 import { supabase } from '../lib/supabase'
 import useScholarStore from '../store/scholarStore'
+import { YEAR_LEVELS } from '../config/yearLevels'
 
 // Get the store instance
 const getStore = () => useScholarStore.getState()
@@ -136,8 +137,7 @@ export const dataService = {
     }).sort((a, b) => b.count - a.count)
     
     // Scholars per year level
-    const yearLevels = ['1st Year', '2nd Year', '3rd Year', '4th Year']
-    const yearLevelStats = yearLevels.map(level => {
+    const yearLevelStats = YEAR_LEVELS.map(level => {
       const count = activeScholars.filter(s => s.yearLevel === level).length
       return { yearLevel: level, count }
     })
@@ -156,7 +156,7 @@ export const dataService = {
 
   // Year levels
   getYearLevels: () => {
-    return ['1st Year', '2nd Year', '3rd Year', '4th Year']
+    return YEAR_LEVELS
   },
 
   getScholarsByYearLevel: (yearLevel) => {

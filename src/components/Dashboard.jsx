@@ -198,7 +198,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right font-bold" style={{ color: '#10b981' }}>
-                        {formatCurrency(scholar.amount)}
+                        {formatCurrency(scholar.scholarship_amount || scholar.amount || 0)}
                       </td>
                     </tr>
                   ))

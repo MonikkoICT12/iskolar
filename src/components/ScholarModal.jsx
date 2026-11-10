@@ -20,10 +20,14 @@ const ScholarModal = ({ scholar, onClose }) => {
     status: 'Processing',
     scholarStatus: 'Active',
     yearGraduated: new Date().getFullYear(),
+    scholarship_amount: '',
     contactNumber: '',
     email: '',
     ...scholar,
   })
+
+  const [scholarshipAmountDisplay, setScholarshipAmountDisplay] = useState('')
+  const [scholarshipAmountError, setScholarshipAmountError] = useState('')
 
   const [schoolSearch, setSchoolSearch] = useState(scholar?.school || '')
   const [showSchoolDropdown, setShowSchoolDropdown] = useState(false)
@@ -43,6 +47,26 @@ const ScholarModal = ({ scholar, onClose }) => {
       document.body.style.paddingRight = ''
     }
   }, [])
+
+  // Initialize scholarship amount display
+  useEffect(() => {
+    if (scholar?.scholarship_amount) {
+      setScholarshipAmountDisplay(formatNumberWithCommas(scholar.scholarship_amount))
+    }
+  }, [scholar])
+
+  // Format number with thousand separators
+  const formatNumberWithCommas = (value) => {
+    if (!value) return ''
+    const num = parseFloat(value)
+    if (isNaN(num)) return ''
+    return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  }
+
+  // Parse formatted number to plain number
+  const parseFormattedNumber = (value) => {
+    return value.replace(/,/g, '')
+  }
 
   useEffect(() => {
     if (schoolSearch) {
@@ -68,6 +92,34 @@ const ScholarModal = ({ scholar, onClose }) => {
       setFormData((prev) => ({ ...prev, [name]: sanitizedValue }))
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }))
+    }
+  }
+
+  const handleScholarshipAmountChange = (e) => {
+    const value = e.target.value
+    // Allow only numbers and decimal point
+    const sanitized = value.replace(/[^0-9.]/g, '')
+    
+    // Prevent multiple decimal points
+    const parts = sanitized.split('.')
+    const formatted = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized
+    
+    // Update display with commas
+    if (formatted) {
+      const plainNumber = parseFormattedNumber(formatted)
+      const numericValue = parseFloat(plainNumber)
+      
+      if (!isNaN(numericValue) && numericValue >= 0) {
+        setScholarshipAmountDisplay(formatNumberWithCommas(plainNumber))
+        setFormData((prev) => ({ ...prev, scholarship_amount: plainNumber }))
+        setScholarshipAmountError('')
+      } else {
+        setScholarshipAmountDisplay(formatted)
+        setFormData((prev) => ({ ...prev, scholarship_amount: '' }))
+      }
+    } else {
+      setScholarshipAmountDisplay('')
+      setFormData((prev) => ({ ...prev, scholarship_amount: '' }))
     }
   }
 
@@ -112,15 +164,29 @@ const ScholarModal = ({ scholar, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!formData.firstName || !formData.lastName || !formData.school || !formData.amount) {
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName || !formData.school) {
       alert('Please fill in all required fields')
       return
     }
 
+    // Validate scholarship amount
+    if (!formData.scholarship_amount || formData.scholarship_amount === '' || parseFloat(formData.scholarship_amount) <= 0) {
+      setScholarshipAmountError('Scholarship amount is required and must be greater than 0')
+      return
+    }
+
+    // Convert scholarship_amount to number
+    const dataToSubmit = {
+      ...formData,
+      scholarship_amount: parseFloat(formData.scholarship_amount) || 0,
+      amount: parseFloat(formData.scholarship_amount) || 0 // Keep amount for backward compatibility
+    }
+
     if (isEditing) {
-      updateScholar(scholar.id, formData)
+      updateScholar(scholar.id, dataToSubmit)
     } else {
-      addScholar(formData)
+      addScholar(dataToSubmit)
     }
 
     onClose()
@@ -400,20 +466,23 @@ const ScholarModal = ({ scholar, onClose }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Scholarship Amount (₱) <span className="text-red-500">*</span>
+                  Scholarship Amount (PHP) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
+                  type="text"
+                  value={scholarshipAmountDisplay}
+                  onChange={handleScholarshipAmountChange}
                   required
-                  min="0"
-                  step="0.01"
-                  placeholder="Enter amount (e.g., 25000)"
+                  placeholder="Enter amount (e.g., 25,000)"
                   className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
+                  style={{ border: scholarshipAmountError ? '1px solid #FF3B30' : '1px solid #E5E5EA' }}
                 />
+                {scholarshipAmountError && (
+                  <p className="text-xs mt-1 text-red-600">{scholarshipAmountError}</p>
+                )}
+                <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
+                  Format: 25,000.00 (typed manually)
+                </p>
               </div>
               {isEditing && (
                 <>

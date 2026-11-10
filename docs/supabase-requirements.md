@@ -30,7 +30,7 @@ The main table storing all scholar information.
 | `yearLevel` | TEXT | No | Year level (e.g., "1st Year", "2nd Year") |
 | `scholarStatus` | TEXT | Yes | Status: "Active" or "Graduated" |
 | `yearGraduated` | TEXT | No | Year of graduation (required if scholarStatus is "Graduated") |
-| `scholarship_amount` | NUMERIC | No | Total scholarship amount received (in PHP) |
+| `scholarship_amount` | NUMERIC | Yes (default 0) | Total scholarship amount received (in PHP, not null, default 0) |
 | `status` | TEXT | No | Payment status: "Paid" or "Processing" |
 | `contact` | TEXT | No | Contact information |
 | `address` | TEXT | No | Home address |
@@ -41,7 +41,8 @@ The main table storing all scholar information.
 #### Notes:
 - `scholarStatus` must be either "Active" or "Graduated"
 - When `scholarStatus` is "Graduated", `yearGraduated` should be populated
-- `scholarship_amount` stores the total scholarship money in PHP currency
+- `scholarship_amount` stores the total scholarship money in PHP currency (NUMERIC, NOT NULL, DEFAULT 0)
+- Existing records without scholarship_amount are treated as 0 until edited by admin
 
 ---
 

@@ -106,7 +106,7 @@ const ScholarRecords = ({ onEditScholar }) => {
   }
 
   const totalFiltered = filteredScholars.reduce(
-    (sum, s) => sum + (parseFloat(s.amount) || 0),
+    (sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0),
     0
   )
 
@@ -369,7 +369,7 @@ const ScholarRecords = ({ onEditScholar }) => {
                     </td>
                     <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
                     <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981' }}>
-                      {formatCurrency(scholar.amount)}
+                      {formatCurrency(scholar.scholarship_amount || scholar.amount || 0)}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span

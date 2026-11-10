@@ -222,7 +222,7 @@ const SchoolSummary = () => {
                       <p className="text-2xl font-bold mt-1" style={{ color: '#10b981' }}>
                         {formatCurrency(
                           getScholarsBySchool(selectedSchool).reduce(
-                            (sum, s) => sum + (parseFloat(s.amount) || 0),
+                            (sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0),
                             0
                           )
                         )}
@@ -238,7 +238,7 @@ const SchoolSummary = () => {
                       <p className="text-2xl font-bold mt-1" style={{ color: '#1D1D1F' }}>
                         {formatCurrency(
                           getScholarsBySchool(selectedSchool).reduce(
-                            (sum, s) => sum + (parseFloat(s.amount) || 0),
+                            (sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0),
                             0
                           ) / getScholarsBySchool(selectedSchool).length || 0
                         )}
@@ -292,7 +292,7 @@ const SchoolSummary = () => {
                                 <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</td>
                                 <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
                                 <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981' }}>
-                                  {formatCurrency(scholar.amount)}
+                                  {formatCurrency(scholar.scholarship_amount || scholar.amount || 0)}
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <span

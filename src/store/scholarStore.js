@@ -33,6 +33,7 @@ const useScholarStore = create(
           status: scholar.status || 'Processing', // Default status
           scholarStatus: scholar.scholarStatus || 'Active', // Default to Active
           yearGraduated: scholar.yearGraduated || null,
+          scholarship_amount: scholar.scholarship_amount || 0, // Default to 0
         }
         set((state) => ({
           scholars: [...state.scholars, newScholar],
@@ -120,7 +121,7 @@ const useScholarStore = create(
       getTotalAmount: () => {
         return get()
           .getScholarsBySchoolYear()
-          .reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0)
+          .reduce((sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0), 0)
       },
 
       getSchoolsList: () => {
@@ -161,7 +162,7 @@ const useScholarStore = create(
           const count = scholars.filter((s) => s.yearLevel === level).length
           const amount = scholars
             .filter((s) => s.yearLevel === level)
-            .reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0)
+            .reduce((sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0), 0)
           stats[level] = { count, amount }
         })
         
@@ -177,7 +178,7 @@ const useScholarStore = create(
           const schoolScholars = scholars.filter((s) => s.school === school)
           const count = schoolScholars.length
           const amount = schoolScholars.reduce(
-            (sum, s) => sum + (parseFloat(s.amount) || 0),
+            (sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0),
             0
           )
           const percentage = total > 0 ? (amount / total) * 100 : 0

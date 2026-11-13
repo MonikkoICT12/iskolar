@@ -53,3 +53,27 @@ export const safeDivide = (numerator, denominator, fallback = 0) => {
 export const safePercentage = (part, total) => {
   return safeDivide(part * 100, total, 0)
 }
+
+// Format scholar full name with suffix
+export const formatScholarName = (scholar, format = 'lastFirst') => {
+  if (!scholar) return ''
+  
+  const { firstName = '', middleName = '', lastName = '', suffix = null } = scholar
+  const suffixDisplay = suffix && suffix !== 'None' ? ` ${suffix}` : ''
+  
+  if (format === 'lastFirst') {
+    // "Dela Cruz, Juan A. Jr."
+    const middleInitial = middleName ? ` ${middleName.charAt(0)}.` : ''
+    return `${lastName}${suffixDisplay}, ${firstName}${middleInitial}`.trim()
+  } else if (format === 'firstLast') {
+    // "Juan A. Dela Cruz Jr."
+    const middleInitial = middleName ? ` ${middleName.charAt(0)}.` : ''
+    return `${firstName}${middleInitial} ${lastName}${suffixDisplay}`.trim()
+  } else if (format === 'full') {
+    // "Juan Alba Dela Cruz Jr."
+    const middle = middleName ? ` ${middleName}` : ''
+    return `${firstName}${middle} ${lastName}${suffixDisplay}`.trim()
+  }
+  
+  return `${lastName}, ${firstName}`
+}

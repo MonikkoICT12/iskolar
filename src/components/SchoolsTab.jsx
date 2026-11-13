@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Eye, Edit2, X, School } from 'lucide-react'
+import { Search, Eye, Edit2, X, School, Calendar } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
+import { formatScholarName } from '../utils/helpers'
+import AdvanceTermModal from './AdvanceTermModal'
 
 const SchoolsTab = () => {
   const { 
     getSchoolsList, 
     getScholarsBySchool,
     updateSchoolName,
+    getActiveScholars,
+    bulkUpdateScholars,
+    bulkMarkAsGraduated,
+    showToast
   } = useScholarStore()
   
   const [viewModalOpen, setViewModalOpen] = useState(false)
@@ -16,8 +22,12 @@ const SchoolsTab = () => {
   const [editSchoolName, setEditSchoolName] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState('')
+  const [advanceTermModalOpen, setAdvanceTermModalOpen] = useState(false)
+  const [advanceTermSchool, setAdvanceTermSchool] = useState(null)
+  const [undoStack, setUndoStack] = useState(null)
 
   const schools = getSchoolsList() // Only schools with active scholars
+  const allActiveScholars = getActiveScholars()
 
   const handleViewSchool = (school) => {
     setSelectedSchool(school)
@@ -50,9 +60,76 @@ const SchoolsTab = () => {
     }
   }
 
+  const handleAdvanceTerm = (school) => {
+    setAdvanceTermSchool(school)
+    setAdvanceTermModalOpen(true)
+  }
+
+  const handleApplyAdvanceTerm = (changes) => {
+    // Save undo information
+    setUndoStack({
+      type: 'advanceTerm',
+      changes: changes.map(c => ({
+        id: c.id,
+        oldYearLevel: c.originalYearLevel,
+        oldSemester: c.originalSemester,
+        oldStatus: c.originalStatus,
+        oldScholarStatus: c.originalScholarStatus,
+        oldYearGraduated: c.originalYearGraduated
+      }))
+    })
+
+    // Apply changes
+    changes.forEach(change => {
+      const updates = {}
+      if (change.yearLevel) updates.yearLevel = change.yearLevel
+      if (change.semester) updates.semester = change.semester
+      if (change.status) updates.status = change.status
+      if (change.scholarStatus) updates.scholarStatus = change.scholarStatus
+      if (change.yearGraduated !== undefined) updates.yearGraduated = change.yearGraduated
+
+      if (change.scholarStatus === 'Graduated') {
+        bulkMarkAsGraduated([change.id])
+      } else {
+        bulkUpdateScholars([change.id], updates)
+      }
+    })
+
+    const promoted = changes.filter(c => c.yearLevel).length
+    const graduated = changes.filter(c => c.scholarStatus === 'Graduated').length
+    const termChanged = changes.filter(c => c.semester).length
+
+    let message = []
+    if (promoted > 0) message.push(`${promoted} promoted`)
+    if (graduated > 0) message.push(`${graduated} graduated`)
+    if (termChanged > 0) message.push(`${termChanged} moved to next term`)
+
+    showToast(`Term advanced: ${message.join(', ')}`, 'success')
+  }
+
+  const handleUndo = () => {
+    if (!undoStack) return
+
+    if (undoStack.type === 'advanceTerm') {
+      undoStack.changes.forEach(change => {
+        const updates = {
+          yearLevel: change.oldYearLevel,
+          semester: change.oldSemester,
+          status: change.oldStatus,
+          scholarStatus: change.oldScholarStatus,
+          yearGraduated: change.oldYearGraduated
+        }
+        bulkUpdateScholars([change.id], updates)
+      })
+      showToast('Changes undone', 'success')
+    }
+
+    setUndoStack(null)
+  }
+
   // Lock body scroll when modal is open
   useEffect(() => {
-    if (viewModalOpen || editModalOpen) {
+    if (viewModalOpen || editModalOpen || advanceTermModalOpen) {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
       document.body.style.overflow = 'hidden'
       document.body.style.paddingRight = `${scrollbarWidth}px`
@@ -167,6 +244,20 @@ const SchoolsTab = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => handleAdvanceTerm(school)}
+                          className="p-2 rounded-lg transition-all duration-150"
+                          style={{ color: '#10b981' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }}
+                          title="Advance Term"
+                        >
+                          <Calendar className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -259,7 +350,7 @@ const SchoolsTab = () => {
                   {getScholarsBySchool(selectedSchool)
                     .filter(s => {
                       if (!searchTerm) return true
-                      const fullName = `${s.firstName} ${s.lastName}`.toLowerCase()
+                      const fullName = formatScholarName(s, 'firstLast').toLowerCase()
                       const course = (s.course || '').toLowerCase()
                       return fullName.includes(searchTerm.toLowerCase()) || course.includes(searchTerm.toLowerCase())
                     })
@@ -270,7 +361,7 @@ const SchoolsTab = () => {
                         style={{ borderColor: '#E5E5EA' }}
                       >
                         <td className="px-6 py-3 text-sm" style={{ color: '#1D1D1F' }}>
-                          {scholar.lastName}, {scholar.firstName} {scholar.middleName}
+                          {formatScholarName(scholar, 'full')}
                         </td>
                         <td className="px-6 py-3 text-sm" style={{ color: '#AAAAAA' }}>
                           {scholar.yearLevel}
@@ -419,6 +510,40 @@ const SchoolsTab = () => {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Undo Bar */}
+      {undoStack && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="rounded-xl p-4 flex items-center gap-4 shadow-2xl" style={{ backgroundColor: '#D1FAE5', border: '2px solid #10b981' }}>
+            <span className="font-semibold" style={{ color: '#1D1D1F' }}>
+              Changes applied
+            </span>
+            <button
+              onClick={handleUndo}
+              className="px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow text-white"
+              style={{ backgroundColor: '#10b981' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+            >
+              Undo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Advance Term Modal */}
+      {advanceTermModalOpen && advanceTermSchool && (
+        <AdvanceTermModal
+          isOpen={advanceTermModalOpen}
+          onClose={() => {
+            setAdvanceTermModalOpen(false)
+            setAdvanceTermSchool(null)
+          }}
+          school={advanceTermSchool}
+          scholars={allActiveScholars.filter(s => s.school === advanceTermSchool)}
+          onApply={handleApplyAdvanceTerm}
+        />
       )}
     </div>
   )

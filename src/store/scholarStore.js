@@ -1,15 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { BARANGAYS } from '../config/barangays'
+import SEMESTER_OPTIONS from '../config/semesters'
 
-const BARANGAYS = [
-  'Atate', 'Caballero', 'Caimito', 'Ganaderia', 'Langka', 
-  'Mapangpang', 'Marcos Village', 'Malabo', 'Popolon', 
-  'Singalat', 'Poblacion', 'Other'
-]
-
-const SEMESTERS = [
-  '1st Sem', '2nd Sem'
-]
+const SEMESTERS = SEMESTER_OPTIONS.map(opt => opt.value)
 
 const useScholarStore = create(
   persist(

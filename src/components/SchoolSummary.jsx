@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { School, Users, Eye, X } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
-import { pluralizeScholar, formatCurrency } from '../utils/helpers'
+import { pluralizeScholar, formatCurrency, formatScholarName } from '../utils/helpers'
 import Pagination from './Pagination'
 import PesoIcon from './PesoIcon'
 
@@ -285,7 +285,7 @@ const SchoolSummary = () => {
                               >
                                 <td className="py-3 px-4">
                                   <div className="font-semibold" style={{ color: '#1D1D1F' }}>
-                                    {startIndex + index + 1}. {scholar.lastName}, {scholar.firstName} {scholar.middleName}
+                                    {startIndex + index + 1}. {formatScholarName(scholar, 'full')}
                                   </div>
                                 </td>
                                 <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.barangay}</td>

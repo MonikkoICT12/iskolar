@@ -15,10 +15,7 @@ export const GRADING_CONFIG = {
   GWA_WARNING: 2.50, // Show warning when GWA is worse than this
   
   // Display Settings
-  DECIMALS: 2,
-  
-  // Semester Options
-  SEMESTERS: ['1st Semester', '2nd Semester', 'Summer']
+  DECIMALS: 2
 }
 
 /**

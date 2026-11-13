@@ -1,6 +1,6 @@
-import { Users, School, TrendingUp, Edit2, ArrowRight, Heart, User } from 'lucide-react'
+import { Users, School, TrendingUp, Edit2, ArrowRight, Heart, User, Users2 } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
-import { YEAR_LEVEL_COLORS, formatCurrency, safeDivide, safePercentage } from '../utils/helpers'
+import { YEAR_LEVEL_COLORS, formatCurrency, safeDivide, safePercentage, formatScholarName } from '../utils/helpers'
 import { YEAR_LEVELS } from '../config/yearLevels'
 import PesoIcon from './PesoIcon'
 
@@ -40,6 +40,36 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
     const count = scholars.filter(s => s.school === school && s.is_solo_parent).length
     return { school, count }
   }).filter(item => item.count > 0).sort((a, b) => b.count - a.count)
+
+  // Gender statistics
+  const maleScholars = scholars.filter(s => (s.gender || 'Male') === 'Male')
+  const femaleScholars = scholars.filter(s => (s.gender || 'Male') === 'Female')
+  const maleCount = maleScholars.length
+  const femaleCount = femaleScholars.length
+  const malePercentage = safePercentage(maleCount, totalScholars)
+  const femalePercentage = safePercentage(femaleCount, totalScholars)
+
+  // Gender breakdown by school
+  const maleBySchool = schools.map(school => {
+    const count = scholars.filter(s => s.school === school && (s.gender || 'Male') === 'Male').length
+    return { school, count }
+  }).filter(item => item.count > 0).sort((a, b) => b.count - a.count)
+
+  const femaleBySchool = schools.map(school => {
+    const count = scholars.filter(s => s.school === school && (s.gender || 'Male') === 'Female').length
+    return { school, count }
+  }).filter(item => item.count > 0).sort((a, b) => b.count - a.count)
+
+  // Payment Status statistics (active scholars only)
+  const activeScholars = scholars.filter(s => s.scholarStatus === 'Active' || !s.scholarStatus)
+  const paidScholars = activeScholars.filter(s => s.paymentStatus === 'Paid')
+  const processingScholars = activeScholars.filter(s => s.paymentStatus === 'Processing' || !s.paymentStatus)
+  const paidCount = paidScholars.length
+  const processingCount = processingScholars.length
+  const paidAmount = paidScholars.reduce((sum, s) => sum + (s.scholarship_amount || s.amount || 0), 0)
+  const processingAmount = processingScholars.reduce((sum, s) => sum + (s.scholarship_amount || s.amount || 0), 0)
+  const paidPercentage = safePercentage(paidCount, activeScholars.length)
+  const processingPercentage = safePercentage(processingCount, activeScholars.length)
 
   // Get most recently added scholars (auto-updating)
   const recentScholars = [...scholars]
@@ -165,8 +195,8 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
         </div>
       </div>
 
-      {/* PWD and Solo Parent Cards - Moved to top, compact design */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* PWD, Solo Parent, and Gender Cards - Three Column Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* PWD Scholars Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center justify-between mb-4">
@@ -286,9 +316,194 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
             </>
           )}
         </div>
+
+        {/* Gender Distribution Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                <Users2 className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Gender Distribution</h2>
+                <p className="text-xs text-slate-500">Male & Female Scholars</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-teal-600">{totalScholars}</p>
+              <p className="text-xs text-slate-500">100% total</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: '#E0F2FE', border: '1px solid #0EA5E9' }}>
+              <p className="text-xs text-slate-600 font-semibold">Male</p>
+              <p className="text-xl font-bold text-sky-600">{maleCount}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{malePercentage.toFixed(1)}%</p>
+            </div>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: '#FCE7F3', border: '1px solid #EC4899' }}>
+              <p className="text-xs text-slate-600 font-semibold">Female</p>
+              <p className="text-xl font-bold text-pink-600">{femaleCount}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{femalePercentage.toFixed(1)}%</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold mb-2" style={{ color: '#AAAAAA' }}>Top Schools by Gender</p>
+            <div className="space-y-1.5">
+              {maleBySchool.length > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-700 truncate flex-1">Male: {maleBySchool[0].school}</span>
+                  <span className="font-bold text-sky-600 ml-2">{maleBySchool[0].count}</span>
+                </div>
+              )}
+              {femaleBySchool.length > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-700 truncate flex-1">Female: {femaleBySchool[0].school}</span>
+                  <span className="font-bold text-pink-600 ml-2">{femaleBySchool[0].count}</span>
+                </div>
+              )}
+              {maleBySchool.length === 0 && femaleBySchool.length === 0 && (
+                <p className="text-xs text-slate-500 text-center py-2">No data yet</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Two Column Overview Grid */}
+      {/* Payment Status and Year Level Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Payment Status Card with Donut Chart */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <div className="w-1 h-6 bg-emerald-600 rounded-full"></div>
+              Payment Status
+            </h2>
+            <span className="text-xs bg-emerald-100 text-emerald-700 font-semibold px-3 py-1 rounded-full">
+              Active Scholars
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mb-5 ml-3">
+            Distribution of payment status across {activeScholars.length} active scholars
+          </p>
+
+          {activeScholars.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <p className="text-sm">No active scholars yet</p>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              {/* Donut Chart */}
+              <div className="relative w-40 h-40">
+                <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                  {/* Processing (amber) segment */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#F59E0B"
+                    strokeWidth="20"
+                    strokeDasharray={`${processingPercentage * 2.512} 251.2`}
+                    strokeDashoffset="0"
+                  />
+                  {/* Paid (green) segment */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="20"
+                    strokeDasharray={`${paidPercentage * 2.512} 251.2`}
+                    strokeDashoffset={`-${processingPercentage * 2.512}`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-2xl font-black text-slate-900">{activeScholars.length}</p>
+                    <p className="text-xs text-slate-500 font-semibold">Active</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend and Stats */}
+              <div className="flex-1 space-y-3">
+                {/* Paid */}
+                <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#D1FAE5', border: '1px solid #10B981' }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10B981' }}></div>
+                    <span className="text-sm font-semibold text-slate-700">Paid</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-green-700">{paidCount}</p>
+                    <p className="text-xs text-slate-600">{formatCurrency(paidAmount)}</p>
+                    <p className="text-xs text-slate-500">{paidPercentage.toFixed(1)}%</p>
+                  </div>
+                </div>
+
+                {/* Processing */}
+                <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B' }}></div>
+                    <span className="text-sm font-semibold text-slate-700">Processing</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-amber-700">{processingCount}</p>
+                    <p className="text-xs text-slate-600">{formatCurrency(processingAmount)}</p>
+                    <p className="text-xs text-slate-500">{processingPercentage.toFixed(1)}%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Year Level Summary */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <div className="w-1 h-6 bg-purple-600 rounded-full"></div>
+                Year Level Stats
+              </h2>
+              <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-3 py-1 rounded-full">
+                Distribution
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mb-5 ml-3">
+              Breakdown by college year level
+            </p>
+
+            <div className="space-y-5">
+              {Object.entries(yearLevelStats).map(([level, stats]) => {
+                const percentage = safePercentage(stats.count, totalScholars)
+                const colorConfig = YEAR_LEVEL_COLORS[level] || YEAR_LEVEL_COLORS['1st Year']
+                return (
+                  <div key={level}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-slate-700">{level}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500">{percentage.toFixed(1)}%</span>
+                        <span className="text-lg font-black text-indigo-700">{stats.count}</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                      <div
+                        className={`${colorConfig.bg} h-full rounded-full transition-all duration-500 shadow-sm`}
+                        style={{ width: `${percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Scholars and Partner Schools Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Scholars Table */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
@@ -333,7 +548,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                   recentScholars.map((scholar) => (
                     <tr key={scholar.id} className="hover:bg-indigo-50/50 transition-colors">
                       <td className="py-3 px-4 font-semibold text-slate-900">
-                        {scholar.lastName}, {scholar.firstName}
+                        {formatScholarName(scholar, 'lastFirst')}
                       </td>
                       <td className="py-3 px-4 text-slate-600">{scholar.barangay}</td>
                       <td className="py-3 px-4 text-slate-600 text-xs">{scholar.school}</td>
@@ -353,46 +568,40 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
           </div>
         </div>
 
-        {/* Year Level Summary */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <div className="w-1 h-6 bg-purple-600 rounded-full"></div>
-                Year Level Stats
-              </h2>
-              <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-3 py-1 rounded-full">
-                Distribution
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mb-5 ml-3">
-              Breakdown by college year level
-            </p>
-
-            <div className="space-y-5">
-              {Object.entries(yearLevelStats).map(([level, stats]) => {
-                const percentage = safePercentage(stats.count, totalScholars)
-                const colorConfig = YEAR_LEVEL_COLORS[level] || YEAR_LEVEL_COLORS['1st Year']
-                return (
-                  <div key={level}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-slate-700">{level}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500">{percentage.toFixed(1)}%</span>
-                        <span className="text-lg font-black text-indigo-700">{stats.count}</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
-                      <div
-                        className={`${colorConfig.bg} h-full rounded-full transition-all duration-500 shadow-sm`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+        {/* Partner Schools Count Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <div className="w-1 h-6 bg-amber-600 rounded-full"></div>
+              Partner Schools
+            </h2>
+            <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-3 py-1 rounded-full">
+              Active
+            </span>
           </div>
+          <p className="text-xs text-slate-500 mb-5 ml-3">
+            Universities and colleges
+          </p>
+
+          <div className="text-center py-6">
+            <div className="w-20 h-20 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-4">
+              <School className="w-10 h-10 text-amber-600" />
+            </div>
+            <h3 className="text-5xl font-black text-amber-600 mb-2">{schools.length}</h3>
+            <p className="text-sm text-slate-600 font-semibold">Partner Institutions</p>
+          </div>
+
+          {schools.length > 0 && (
+            <div className="pt-4 border-t border-slate-200">
+              <p className="text-xs font-semibold mb-2" style={{ color: '#AAAAAA' }}>Top Partner</p>
+              <div className="text-sm text-slate-700 font-medium">
+                {schoolStats[0]?.school || 'N/A'}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {schoolStats[0]?.count || 0} scholars
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

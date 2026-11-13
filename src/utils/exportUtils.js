@@ -36,9 +36,13 @@ function scholarToRow(scholar) {
     'Last Name': scholar.lastName || '',
     'First Name': scholar.firstName || '',
     'Middle Name': scholar.middleName || '',
+    'Suffix': (scholar.suffix && scholar.suffix !== 'None') ? scholar.suffix : '',
+    'Gender': scholar.gender || 'Male',
+    'Barangay': scholar.barangay || '',
     'School / University': scholar.school || '',
     'Course': scholar.course || '',
     'Year Level': scholar.yearLevel || '',
+    'Semester': scholar.semester || '',
     'PWD': scholar.is_pwd ? 'Yes' : 'No',
     'Solo Parent': scholar.is_solo_parent ? 'Yes' : 'No',
     'Scholarship Amount': scholar.scholarship_amount || scholar.amount || 0,
@@ -114,9 +118,13 @@ export function exportToExcel(scholars) {
     { wch: 15 }, // Last Name
     { wch: 15 }, // First Name
     { wch: 15 }, // Middle Name
+    { wch: 8 },  // Suffix
+    { wch: 10 }, // Gender
+    { wch: 18 }, // Barangay
     { wch: 40 }, // School / University
     { wch: 30 }, // Course
     { wch: 12 }, // Year Level
+    { wch: 15 }, // Semester
     { wch: 8 },  // PWD
     { wch: 12 }, // Solo Parent
     { wch: 18 }, // Scholarship Amount
@@ -151,9 +159,13 @@ export function generateTemplate(format = 'excel') {
     'Last Name': 'Dela Cruz',
     'First Name': 'Juan',
     'Middle Name': 'Santos',
+    'Suffix': '',
+    'Gender': 'Male',
+    'Barangay': 'Atate',
     'School / University': 'Nueva Ecija University of Science and Technology',
     'Course': 'BS Computer Science',
     'Year Level': '2nd Year',
+    'Semester': '1st Semester',
     'PWD': 'No',
     'Solo Parent': 'No',
     'Scholarship Amount': 25000,
@@ -162,7 +174,6 @@ export function generateTemplate(format = 'excel') {
     'Status': 'Active',
     'Year Graduated': '',
     'School Year': '2026-2027',
-    'Semester': '1st Semester',
     'GWA': '1.75'
   }
   
@@ -188,10 +199,11 @@ export function generateTemplate(format = 'excel') {
     const worksheet = XLSX.utils.json_to_sheet([exampleRow])
     
     const columnWidths = [
-      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 40 },
-      { wch: 30 }, { wch: 12 }, { wch: 8 }, { wch: 12 },
-      { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 12 },
-      { wch: 14 }, { wch: 15 }, { wch: 15 }, { wch: 8 }
+      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 8 },  // Last, First, Middle, Suffix
+      { wch: 10 }, { wch: 18 }, { wch: 40 }, { wch: 30 }, // Gender, Barangay, School, Course
+      { wch: 12 }, { wch: 15 }, { wch: 8 }, { wch: 12 },  // Year Level, Semester, PWD, Solo Parent
+      { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, // Scholarship, GWA, Payment, Status
+      { wch: 14 }, { wch: 15 }, { wch: 8 }                // Year Graduated, School Year, GWA
     ]
     worksheet['!cols'] = columnWidths
     

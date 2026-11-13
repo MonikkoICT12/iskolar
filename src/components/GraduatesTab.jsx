@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Search, Eye, X, GraduationCap, RotateCcw } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
+import { formatScholarName } from '../utils/helpers'
 
 const GraduatesTab = () => {
   const { 
@@ -249,7 +250,7 @@ const GraduatesTab = () => {
                   {getGraduatedScholarsBySchool(selectedSchool)
                     .filter(s => {
                       const matchesSearch = !searchTerm || 
-                        `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        formatScholarName(s, 'firstLast').toLowerCase().includes(searchTerm.toLowerCase()) ||
                         (s.course || '').toLowerCase().includes(searchTerm.toLowerCase())
                       
                       const matchesYear = yearFilter === 'ALL' || s.yearGraduated == yearFilter
@@ -263,7 +264,7 @@ const GraduatesTab = () => {
                         style={{ borderColor: '#E5E5EA' }}
                       >
                         <td className="px-6 py-3 text-sm" style={{ color: '#1D1D1F' }}>
-                          {scholar.lastName}, {scholar.firstName} {scholar.middleName}
+                          {formatScholarName(scholar, 'full')}
                         </td>
                         <td className="px-6 py-3 text-sm" style={{ color: '#AAAAAA' }}>
                           {scholar.course || '-'}
@@ -363,7 +364,7 @@ const GraduatesTab = () => {
             {/* Modal Body */}
             <div className="px-6 py-6">
               <p className="mb-4" style={{ color: '#1D1D1F' }}>
-                Return <strong>{scholarToReturn.firstName} {scholarToReturn.lastName}</strong> to active status?
+                Return <strong>{formatScholarName(scholarToReturn, 'firstLast')}</strong> to active status?
               </p>
               <p className="text-sm" style={{ color: '#AAAAAA' }}>
                 This scholar will be removed from Graduates and returned to the Scholars tab.

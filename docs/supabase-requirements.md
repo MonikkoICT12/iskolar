@@ -1,360 +1,289 @@
-# Supabase Backend Requirements
+# Supabase Database Requirements
 
-This document specifies the database structure, RPC functions, and access rules required by the front-end application.
+This document lists all database schema changes and function updates required to support the seven major system updates implemented in the front-end application.
 
-## Environment Variables
+## Database Schema Changes
 
-The front-end uses the following environment variables:
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous key (public key)
-
-**IMPORTANT:** Never use or expose the service role key in the front-end code.
-
----
-
-## Database Schema
-
-### Table: `scholars`
-
-The main table storing all scholar information.
-
-#### Columns:
-
-| Column Name | Data Type | Required | Description |
-|-------------|-----------|----------|-------------|
-| `id` | UUID | Yes | Primary key, auto-generated |
-| `firstName` | TEXT | Yes | Scholar's first name |
-| `lastName` | TEXT | Yes | Scholar's last name |
-| `school` | TEXT | Yes | Name of the university/school |
-| `course` | TEXT | No | Academic program/course |
-| `yearLevel` | TEXT | No | Year level (e.g., "1st Year" up to "6th Year") |
-| `scholarStatus` | TEXT | Yes | Status: "Active" or "Graduated" |
-| `yearGraduated` | TEXT | No | Year of graduation (required if scholarStatus is "Graduated") |
-| `is_pwd` | BOOLEAN | Yes (default false) | Person with Disability status |
-| `is_solo_parent` | BOOLEAN | Yes (default false) | Solo Parent status |
-| `scholarship_amount` | NUMERIC | Yes (default 0) | Total scholarship amount received (in PHP, not null, default 0) |
-| `status` | TEXT | No | Payment status: "Paid" or "Processing" |
-| `contact` | TEXT | No | Contact information |
-| `address` | TEXT | No | Home address |
-| `schoolYear` | TEXT | No | School year (e.g., "2025-2026") |
-| `created_at` | TIMESTAMP | Yes | Record creation timestamp (auto-generated) |
-| `updated_at` | TIMESTAMP | Yes | Last update timestamp (auto-updated) |
-
-#### Notes:
-- `scholarStatus` must be either "Active" or "Graduated"
-- When `scholarStatus` is "Graduated", `yearGraduated` should be populated
-- `scholarship_amount` stores the total scholarship money in PHP currency (NUMERIC, NOT NULL, DEFAULT 0)
-- Existing records without scholarship_amount are treated as 0 until edited by admin
-- `yearLevel` accepts "1st Year" through "6th Year" (no longer limited to 1-4)
-- `is_pwd` and `is_solo_parent` are boolean fields for classification and reporting
-
----
-
-### Table: `scholar_grades`
-
-Stores grade entries for each scholar (admin-only access).
-
-#### Columns:
-
-| Column Name | Data Type | Required | Description |
-|-------------|-----------|----------|-------------|
-| `id` | UUID | Yes | Primary key, auto-generated |
-| `scholar_id` | UUID | Yes | Foreign key to scholars.id, ON DELETE CASCADE |
-| `school_year` | TEXT | Yes | School year (e.g., "2026-2027") |
-| `semester` | TEXT | Yes | Semester (e.g., "1st Semester", "2nd Semester", "Summer") |
-| `gwa` | NUMERIC(3,2) | Yes | General Weighted Average (e.g., 1.75) |
-| `created_at` | TIMESTAMP | Yes | Record creation timestamp (auto-generated) |
-
-#### Notes:
-- GWA scale: 1.00 (highest) to 5.00 (lowest), two decimal places
-- This table is NOT accessible by anonymous users (RLS: admin-only)
-- Used to track academic performance over time
-
----
-
-## RPC Functions (Public Endpoints)
-
-These functions must be callable using the **anonymous key** (public access). They return aggregate data only, with no personal information.
-
-### 1. `public_dashboard_stats()`
-
-**Purpose:** Returns aggregate statistics for the public dashboard.
-
-**Parameters:** None
-
-**Returns:** JSON object with the following fields:
-
-```json
-{
-  "total_scholars": 150,
-  "active_scholars": 120,
-  "graduated_scholars": 30,
-  "total_schools": 8,
-  "pwd_count": 12,
-  "solo_parent_count": 8,
-  "scholars_per_school": [
-    {
-      "school_name": "Nueva Ecija University of Science and Technology",
-      "count": 45
-    },
-    {
-      "school_name": "Central Luzon State University",
-      "count": 38
-    }
-  ],
-  "scholars_per_year_level": [
-    {
-      "year_level": "1st Year",
-      "count": 35
-    },
-    {
-      "year_level": "2nd Year",
-      "count": 30
-    },
-    {
-      "year_level": "3rd Year",
-      "count": 28
-    },
-    {
-      "year_level": "4th Year",
-      "count": 27
-    }
-  ],
-  "paid_count": 100,
-  "unpaid_count": 20
-}
-```
-
-**Implementation Notes:**
-- Count only scholars with `scholarStatus = 'Active'` for active_scholars
-- Count only scholars with `scholarStatus = 'Graduated'` for graduated_scholars
-- `pwd_count`: count scholars where `is_pwd = true`
-- `solo_parent_count`: count scholars where `is_solo_parent = true`
-- `scholars_per_school` should include all schools, sorted by count (descending)
-- `scholars_per_year_level` should count active scholars only, include all year levels (1st through 6th)
-- `paid_count`: scholars with `status = 'Paid'`
-- `unpaid_count`: scholars with `status = 'Processing'`
-
----
-
-### 2. `public_graduates_by_school()`
-
-**Purpose:** Returns aggregate graduate data grouped by school.
-
-**Parameters:** None
-
-**Returns:** JSON array of objects:
-
-```json
-[
-  {
-    "school_name": "Nueva Ecija University of Science and Technology",
-    "graduate_count": 25,
-    "total_scholarship_amount": 1250000.00
-  },
-  {
-    "school_name": "Central Luzon State University",
-    "graduate_count": 18,
-    "total_scholarship_amount": 900000.00
-  }
-]
-```
-
-**Implementation Notes:**
-- Include only scholars with `scholarStatus = 'Graduated'`
-- Group by `school` field
-- `total_scholarship_amount` is the SUM of `scholarship_amount` for all graduated scholars in that school
-- Sort alphabetically by school name
-- Return empty array `[]` if no graduates exist
-
----
-
-## Row Level Security (RLS) Policies
-
-### Scholars Table
-
-**Public Access (Anonymous Key):**
-- **NO direct access** to the `scholars` table
-- Public users can ONLY call the two RPC functions above
-
-### Admin Access (Authenticated Users):**
-- **Full CRUD access** to all rows in the `scholars` table
-- **Full access** to `scholar_grades` table (read, create, update, delete)
-- Admins can SELECT, INSERT, UPDATE, DELETE
-
-#### Sample RLS Policies:
+### 1. Add `suffix` Column to `scholars` Table
 
 ```sql
--- Public: No direct access to scholars table
--- (RPC functions are public but the table is not)
+-- Add suffix column (optional field)
+ALTER TABLE scholars
+ADD COLUMN suffix TEXT NULL;
 
--- Public: No access to scholar_grades table
--- (grades are never shown on public landing page)
-
--- Admin: Full access for authenticated users
-CREATE POLICY "Admins can do everything on scholars"
-ON scholars
-FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-
-CREATE POLICY "Admins can do everything on grades"
-ON scholar_grades
-FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
+-- Add check constraint for valid suffix values
+ALTER TABLE scholars
+ADD CONSTRAINT check_suffix_values 
+CHECK (suffix IS NULL OR suffix IN ('None', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'));
 ```
 
----
-
-## Authentication
-
-### Admin Account
-
-- Use **Supabase Auth** with email/password
-- Admin account(s) must be created through Supabase Dashboard or Auth API
-- The front-end does NOT create admin accounts automatically
-- Sample admin email: `admin@palayancity.gov.ph` (or your choice)
-
-### Sign In Flow
-
-1. User enters email and password on `/signin` page
-2. Front-end calls `supabase.auth.signInWithPassword({ email, password })`
-3. On success, user is redirected to `/admin` routes
-4. Protected routes require valid JWT token from Supabase Auth
+**Purpose**: Store scholar name suffixes (Jr., Sr., II, III, IV, V, or None)  
+**Type**: TEXT (nullable)  
+**Valid Values**: NULL, 'None', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'
 
 ---
 
-## Testing Checklist
-
-### Public Endpoints (No Authentication Required)
-- [ ] Call `public_dashboard_stats()` with anon key - returns aggregate statistics
-- [ ] Call `public_graduates_by_school()` with anon key - returns graduate totals per school
-- [ ] Verify RPC functions do NOT expose personal information (names, contact, address)
-
-### Admin Access (Authentication Required)
-- [ ] Create admin user in Supabase Auth
-- [ ] Sign in with admin credentials
-- [ ] Verify authenticated user can read all scholars
-- [ ] Verify authenticated user can create/update/delete scholars
-
-### Security
-- [ ] Anonymous users CANNOT directly query `scholars` table
-- [ ] Anonymous users can ONLY call the two public RPC functions
-- [ ] Admin users require valid authentication token
-- [ ] RLS policies are enabled and tested
-
----
-
-## Example SQL Implementation
-
-Here's a sample implementation for the RPC functions:
+### 2. Add `gender` Column to `scholars` Table
 
 ```sql
--- Function: public_dashboard_stats
+-- Add gender column (required field with default)
+ALTER TABLE scholars
+ADD COLUMN gender TEXT NOT NULL DEFAULT 'Male';
+
+-- Add check constraint for valid gender values
+ALTER TABLE scholars
+ADD CONSTRAINT check_gender_values 
+CHECK (gender IN ('Male', 'Female'));
+```
+
+**Purpose**: Store scholar gender information  
+**Type**: TEXT (not null, default 'Male')  
+**Valid Values**: 'Male', 'Female'
+
+---
+
+### 3. Update `barangay` Column Constraint
+
+```sql
+-- Drop existing barangay constraint if it exists
+ALTER TABLE scholars
+DROP CONSTRAINT IF EXISTS check_barangay_values;
+
+-- Add updated constraint with 19 barangays + Other
+ALTER TABLE scholars
+ADD CONSTRAINT check_barangay_values 
+CHECK (barangay IN (
+  'Atate', 
+  'Aulo', 
+  'Bagong Buhay', 
+  'Caballero', 
+  'Caimito', 
+  'Doña Josefa', 
+  'Ganaderia', 
+  'Imelda Valley', 
+  'Langka', 
+  'Malate', 
+  'Maligaya', 
+  'Manacnac', 
+  'Mapait', 
+  'Marcos Village', 
+  'Militar', 
+  'Popolon', 
+  'Santolan', 
+  'Sapang Buho', 
+  'Singalat', 
+  'Other'
+));
+```
+
+**Purpose**: Enforce valid barangay values (19 specific barangays + Other)  
+**Valid Values**: Exact list of 19 barangays plus 'Other' (see above)
+
+---
+
+## Database Functions Updates
+
+### 4. Update `public_dashboard_stats()` Function
+
+The `public_dashboard_stats()` function needs to be updated to include:
+- **`male_count`**: Count of scholars with gender = 'Male'
+- **`female_count`**: Count of scholars with gender = 'Female'
+- **`processing_count`**: Renamed from `unpaid_count`, count of scholars with paymentStatus = 'Processing' or NULL
+
+```sql
 CREATE OR REPLACE FUNCTION public_dashboard_stats()
-RETURNS JSON
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  result JSON;
+RETURNS TABLE (
+  available BOOLEAN,
+  total_scholars BIGINT,
+  active_scholars BIGINT,
+  graduated_scholars BIGINT,
+  total_schools BIGINT,
+  pwd_count BIGINT,
+  solo_parent_count BIGINT,
+  male_count BIGINT,
+  female_count BIGINT,
+  paid_count BIGINT,
+  processing_count BIGINT,
+  scholars_per_school JSONB,
+  scholars_per_year_level JSONB
+) AS $$
 BEGIN
-  SELECT json_build_object(
-    'total_scholars', (SELECT COUNT(*) FROM scholars),
-    'active_scholars', (SELECT COUNT(*) FROM scholars WHERE "scholarStatus" = 'Active'),
-    'graduated_scholars', (SELECT COUNT(*) FROM scholars WHERE "scholarStatus" = 'Graduated'),
-    'total_schools', (SELECT COUNT(DISTINCT school) FROM scholars),
-    'scholars_per_school', (
-      SELECT json_agg(json_build_object('school_name', school, 'count', cnt) ORDER BY cnt DESC)
+  RETURN QUERY
+  SELECT
+    true AS available,
+    COUNT(*) AS total_scholars,
+    COUNT(*) FILTER (WHERE "scholarStatus" = 'Active' OR "scholarStatus" IS NULL) AS active_scholars,
+    COUNT(*) FILTER (WHERE "scholarStatus" = 'Graduated') AS graduated_scholars,
+    COUNT(DISTINCT school) AS total_schools,
+    COUNT(*) FILTER (WHERE is_pwd = true) AS pwd_count,
+    COUNT(*) FILTER (WHERE is_solo_parent = true) AS solo_parent_count,
+    COUNT(*) FILTER (WHERE gender = 'Male') AS male_count,
+    COUNT(*) FILTER (WHERE gender = 'Female') AS female_count,
+    COUNT(*) FILTER (WHERE "paymentStatus" = 'Paid') AS paid_count,
+    COUNT(*) FILTER (WHERE "paymentStatus" = 'Processing' OR "paymentStatus" IS NULL) AS processing_count,
+    (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'school_name', school,
+          'count', cnt
+        ) ORDER BY cnt DESC
+      )
       FROM (
-        SELECT school, COUNT(*) as cnt
+        SELECT school, COUNT(*) AS cnt
         FROM scholars
         GROUP BY school
-      ) schools
-    ),
-    'scholars_per_year_level', (
-      SELECT json_agg(json_build_object('year_level', "yearLevel", 'count', cnt))
+      ) school_stats
+    ) AS scholars_per_school,
+    (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'year_level', "yearLevel",
+          'count', cnt
+        ) ORDER BY "yearLevel"
+      )
       FROM (
-        SELECT "yearLevel", COUNT(*) as cnt
+        SELECT "yearLevel", COUNT(*) AS cnt
         FROM scholars
-        WHERE "scholarStatus" = 'Active' AND "yearLevel" IS NOT NULL
         GROUP BY "yearLevel"
-        ORDER BY "yearLevel"
-      ) year_levels
-    ),
-    'paid_count', (SELECT COUNT(*) FROM scholars WHERE status = 'Paid'),
-    'unpaid_count', (SELECT COUNT(*) FROM scholars WHERE status = 'Processing'),
-    'pwd_count', (SELECT COUNT(*) FROM scholars WHERE is_pwd = true),
-    'solo_parent_count', (SELECT COUNT(*) FROM scholars WHERE is_solo_parent = true)
-  )
-  INTO result;
-  
-  RETURN result;
+      ) year_level_stats
+    ) AS scholars_per_year_level
+  FROM scholars;
 END;
-$$;
-
--- Grant execute permission to anonymous users
-GRANT EXECUTE ON FUNCTION public_dashboard_stats() TO anon;
-
--- Function: public_graduates_by_school
-CREATE OR REPLACE FUNCTION public_graduates_by_school()
-RETURNS JSON
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  result JSON;
-BEGIN
-  SELECT json_agg(
-    json_build_object(
-      'school_name', school,
-      'graduate_count', graduate_count,
-      'total_scholarship_amount', total_amount
-    ) ORDER BY school ASC
-  )
-  INTO result
-  FROM (
-    SELECT 
-      school,
-      COUNT(*) as graduate_count,
-      COALESCE(SUM(scholarship_amount), 0) as total_amount
-    FROM scholars
-    WHERE "scholarStatus" = 'Graduated'
-    GROUP BY school
-  ) graduates;
-  
-  RETURN COALESCE(result, '[]'::json);
-END;
-$$;
-
--- Grant execute permission to anonymous users
-GRANT EXECUTE ON FUNCTION public_graduates_by_school() TO anon;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
----
-
-## Front-End Behavior
-
-### Landing Page (Public)
-- Calls both RPC functions on page load
-- Shows "Data is not available yet" if functions don't exist or return errors
-- Displays ONLY aggregate data (no personal information)
-- Does NOT require authentication
-
-### Admin Pages (Protected)
-- Requires Supabase Auth login
-- Direct access to `scholars` table for full CRUD operations
-- Shows all personal details (names, contact, address, etc.)
-- Logout button signs out and returns to landing page
+**Key Changes**:
+1. Added `male_count`: `COUNT(*) FILTER (WHERE gender = 'Male')`
+2. Added `female_count`: `COUNT(*) FILTER (WHERE gender = 'Female')`
+3. Renamed `unpaid_count` to `processing_count`: `COUNT(*) FILTER (WHERE "paymentStatus" = 'Processing' OR "paymentStatus" IS NULL)`
 
 ---
 
-## Questions or Issues?
+## Data Migration Considerations
 
-If you have questions about the requirements, please refer to:
-- The front-end codebase at `src/services/dataService.js`
-- The landing page component at `src/components/LandingPage.jsx`
-- Supabase documentation: https://supabase.com/docs
+### Default Values for Existing Records
+
+When adding the new columns to existing data:
+
+1. **`suffix`**: Will be `NULL` for existing scholars (acceptable, means no suffix)
+2. **`gender`**: Will default to `'Male'` for existing scholars (can be updated by admin as needed)
+
+### Import Validation Requirements
+
+The import process now requires:
+
+1. **Gender**: Must be present and must be 'Male' or 'Female'
+2. **Barangay**: Must match one of the 20 valid values (19 barangays + Other)
+3. **GWA**: Must have at least one valid grade entry (cannot be empty)
+4. **Suffix**: Optional; if provided, must be valid value
+
+---
+
+## Testing Requirements
+
+After applying these changes, verify:
+
+1. ✅ Can add new scholar with gender 'Male' or 'Female'
+2. ✅ Can add new scholar with suffix (Jr., Sr., II, III, IV, V, or None)
+3. ✅ Can add new scholar with any of 20 valid barangays
+4. ✅ `public_dashboard_stats()` returns `male_count`, `female_count`, and `processing_count`
+5. ✅ Import rejects rows without gender or with invalid gender
+6. ✅ Import rejects rows with invalid barangay names
+7. ✅ Import rejects rows without at least one grade entry with valid GWA
+8. ✅ Export includes Suffix and Gender columns
+9. ✅ Grades are required (cannot save scholar without at least one grade)
+10. ✅ Semester in grades is derived from Academic Information semester (single source of truth)
+
+---
+
+## Summary of Changes
+
+| Change | Type | Required | Impact |
+|--------|------|----------|--------|
+| Add `suffix` column | Schema | No | Optional field for name suffixes |
+| Add `gender` column | Schema | Yes | Required field for gender tracking |
+| Update `barangay` constraint | Schema | Yes | Enforce 19 barangays + Other |
+| Add `male_count` to dashboard | Function | Yes | Gender statistics on public dashboard |
+| Add `female_count` to dashboard | Function | Yes | Gender statistics on public dashboard |
+| Rename `unpaid_count` to `processing_count` | Function | Yes | Consistent terminology (Processing not Unpaid) |
+
+---
+
+**Note**: All database changes must be applied before the updated front-end application is deployed to production. The front-end is designed to gracefully handle missing database columns by using default values (`gender='Male'`, `suffix=null`), but full functionality requires all schema and function updates.
+
+
+---
+
+## Additional Updates - Payment Status and Semester
+
+### 1. Semester - Add 3rd Semester Support
+
+The system now supports trimester schools with three semesters per year.
+
+```sql
+-- Update semester check constraint if it exists
+ALTER TABLE scholars
+DROP CONSTRAINT IF EXISTS check_semester_values;
+
+ALTER TABLE scholars
+ADD CONSTRAINT check_semester_values
+CHECK (semester IS NULL OR semester IN ('1st Sem', '2nd Sem', '3rd Sem', 'Summer'));
+```
+
+**Grade semester values** in the `grades` JSONB array now include:
+- `'1st Semester'`
+- `'2nd Semester'`
+- `'3rd Semester'`  (NEW)
+- `'Summer'`
+
+**Purpose**: Support trimester schools that have three terms per academic year.
+
+---
+
+### 2. Payment Status - Read-Only in Edit Form
+
+Payment status is now read-only in the Edit Scholar form and can only be changed through:
+1. **Bulk actions**: "Mark as Paid" and "Mark as Unpaid" in the Scholars tab
+2. **Advance Term**: When advancing scholars to a new term, payment status can be reset to Processing
+
+**No database changes required**. The existing `status` column (Processing/Paid) continues to work.
+
+**Front-end behavior**:
+- Add Scholar form: Automatically sets status to 'Processing'
+- Edit Scholar form: Shows current status as read-only badge, not editable
+- Bulk actions update status for multiple scholars at once
+- Advance Term can optionally reset status to 'Processing' when moving scholars to new term
+
+---
+
+### 3. Advance Term - Batch Updates Per School
+
+The Advance Term feature allows promoting scholars by school at the end of each term/year.
+
+**Required permissions**: Admin must be able to batch-update the following columns on the `scholars` table:
+- `year_level` (e.g., '1st Year' → '2nd Year')
+- `semester` (e.g., '1st Sem' → '2nd Sem' → '3rd Sem' → '1st Sem' [new year])
+- `payment_status` (can be reset to 'Processing' when term changes)
+- `status` (changed to 'Graduated' when graduating)
+- `year_graduated` (set when graduating)
+
+**No new columns needed**. These are covered by the existing admin RLS policy.
+
+**Behavior**:
+- Updates are batched per school (one batch update per school advancement)
+- Changes are computed from original values (no cascading)
+- Graduated scholars are moved to 'Graduated' status and appear in Graduates tab
+- Payment status can optionally be reset to 'Processing' for scholars whose term changes
+
+---
+
+## Summary of New Requirements
+
+| Feature | Database Change | Required |
+|---------|----------------|----------|
+| 3rd Semester support | Update semester constraint | Yes |
+| Payment status read-only | None (UI-only change) | No |
+| Advance Term batch updates | Existing admin policy covers it | No |
+| Grade semester '3rd Semester' | Accept new value in grades JSONB | Yes |
+
+**Migration Priority**: Only the semester constraint update is required. The rest works with existing schema.

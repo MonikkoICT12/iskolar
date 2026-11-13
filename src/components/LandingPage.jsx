@@ -193,8 +193,8 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* PWD and Solo Parent Cards - Moved up */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+            {/* PWD, Solo Parent, and Gender Cards - Three Column Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
               {/* PWD Scholars */}
               <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
                 <div className="flex items-center justify-between mb-3">
@@ -224,6 +224,32 @@ const LandingPage = () => {
                   <p className="text-sm" style={{ color: COLORS.secondary }}>
                     ({safePercentage(dashboardData.solo_parent_count || 0, dashboardData.total_scholars).toFixed(1)}%)
                   </p>
+                </div>
+              </div>
+
+              {/* Gender Distribution */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                    <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                  </div>
+                </div>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Gender Distribution</p>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div>
+                    <p className="text-xs" style={{ color: COLORS.secondary }}>Male</p>
+                    <p className="text-xl font-bold" style={{ color: COLORS.text }}>{dashboardData.male_count || 0}</p>
+                    <p className="text-xs" style={{ color: COLORS.secondary }}>
+                      ({safePercentage(dashboardData.male_count || 0, dashboardData.total_scholars).toFixed(1)}%)
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs" style={{ color: COLORS.secondary }}>Female</p>
+                    <p className="text-xl font-bold" style={{ color: COLORS.text }}>{dashboardData.female_count || 0}</p>
+                    <p className="text-xs" style={{ color: COLORS.secondary }}>
+                      ({safePercentage(dashboardData.female_count || 0, dashboardData.total_scholars).toFixed(1)}%)
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -298,7 +324,7 @@ const LandingPage = () => {
                       <Pie
                         data={[
                           { name: 'Paid', value: dashboardData.paid_count || 0 },
-                          { name: 'Processing', value: dashboardData.unpaid_count || 0 },
+                          { name: 'Processing', value: dashboardData.processing_count || 0 },
                         ]}
                         cx="50%"
                         cy="50%"

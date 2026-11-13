@@ -9,6 +9,8 @@ import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import { YEAR_LEVELS } from '../config/yearLevels'
 import { validateGWA } from '../config/grading'
+import { BARANGAYS, matchBarangay } from '../config/barangays'
+import { SUFFIXES } from '../config/suffixes'
 
 /**
  * Column name mappings (case-insensitive, trimmed)
@@ -17,6 +19,9 @@ const COLUMN_MAPPINGS = {
   lastName: ['last name', 'lastname', 'surname', 'family name'],
   firstName: ['first name', 'firstname', 'given name'],
   middleName: ['middle name', 'middlename', 'middle initial'],
+  suffix: ['suffix', 'name suffix', 'jr/sr'],
+  gender: ['gender', 'sex'],
+  barangay: ['barangay', 'brgy', 'barangay/municipality'],
   school: ['school', 'university', 'school / university', 'school/university'],
   course: ['course', 'program', 'degree'],
   yearLevel: ['year level', 'yearlevel', 'year', 'level'],
@@ -108,6 +113,41 @@ function parseYearLevel(value) {
 }
 
 /**
+ * Parse semester from string
+ * @param {string} value - String value
+ * @returns {string} Normalized semester or empty string
+ */
+function parseSemester(value) {
+  if (!value) return ''
+  const str = String(value).toLowerCase().trim()
+  
+  // Match patterns like "1", "1st", "1st sem", "1st semester", "first", etc.
+  const semesterMap = {
+    '1': '1st Semester',
+    '1st': '1st Semester',
+    '1st sem': '1st Semester',
+    '1st semester': '1st Semester',
+    'first': '1st Semester',
+    'first semester': '1st Semester',
+    '2': '2nd Semester',
+    '2nd': '2nd Semester',
+    '2nd sem': '2nd Semester',
+    '2nd semester': '2nd Semester',
+    'second': '2nd Semester',
+    'second semester': '2nd Semester',
+    '3': '3rd Semester',
+    '3rd': '3rd Semester',
+    '3rd sem': '3rd Semester',
+    '3rd semester': '3rd Semester',
+    'third': '3rd Semester',
+    'third semester': '3rd Semester',
+    'summer': 'Summer',
+  }
+  
+  return semesterMap[str] || value
+}
+
+/**
  * Validate and parse a single row of scholar data
  * @param {Array} row - Raw row data
  * @param {Array} headers - Column headers
@@ -133,6 +173,9 @@ function parseScholarRow(row, headers, rowIndex) {
     firstName: getValue('firstName'),
     lastName: getValue('lastName'),
     middleName: getValue('middleName'),
+    suffix: getValue('suffix') || 'None',
+    gender: getValue('gender'),
+    barangay: getValue('barangay'),
     school: getValue('school'),
     course: getValue('course'),
     yearLevel: parseYearLevel(getValue('yearLevel')),
@@ -150,6 +193,31 @@ function parseScholarRow(row, headers, rowIndex) {
   if (!data.lastName) errors.push('Last Name is required')
   if (!data.school) errors.push('School / University is required')
   
+  // Validate gender (required)
+  if (!data.gender) {
+    errors.push('Gender is required')
+  } else if (data.gender !== 'Male' && data.gender !== 'Female') {
+    errors.push(`Invalid Gender: ${data.gender}. Must be 'Male' or 'Female'`)
+  }
+  
+  // Validate barangay if provided
+  if (data.barangay) {
+    const matchedBarangay = matchBarangay(data.barangay)
+    if (!matchedBarangay) {
+      errors.push(`Invalid Barangay: ${data.barangay}. Must be one of the 19 valid barangays or 'Other'`)
+    } else {
+      data.barangay = matchedBarangay // Use normalized value
+    }
+  }
+  
+  // Validate suffix if provided
+  if (data.suffix && data.suffix !== 'None') {
+    const validSuffixes = SUFFIXES.map(s => s.toLowerCase())
+    if (!validSuffixes.includes(data.suffix.toLowerCase())) {
+      errors.push(`Invalid Suffix: ${data.suffix}. Must be one of: ${SUFFIXES.join(', ')}`)
+    }
+  }
+  
   // Validate year level if provided
   if (getValue('yearLevel') && !data.yearLevel) {
     errors.push(`Invalid Year Level: ${getValue('yearLevel')}`)
@@ -162,7 +230,7 @@ function parseScholarRow(row, headers, rowIndex) {
   
   // Add grade entry if GWA is provided
   const schoolYear = getValue('schoolYear')
-  const semester = getValue('semester')
+  const semester = parseSemester(getValue('semester'))
   const gwa = getValue('gwa')
   
   if (schoolYear && semester && gwa) {
@@ -177,6 +245,11 @@ function parseScholarRow(row, headers, rowIndex) {
     } else {
       errors.push(`Invalid GWA: ${gwaValidation.error}`)
     }
+  }
+  
+  // Require at least one valid grade entry
+  if (data.grades.length === 0 && (schoolYear || semester || gwa)) {
+    errors.push('At least one valid grade entry is required (School Year, Semester, and GWA must all be provided)')
   }
   
   return {

@@ -3,10 +3,11 @@ import { Search, Edit2, Trash2, Eye, UserPlus, CheckSquare, Square, MinusSquare,
 import useScholarStore, { BARANGAYS, SEMESTERS } from '../store/scholarStore'
 import { YEAR_LEVELS } from '../config/yearLevels'
 import { formatGWA, isGWAWarning } from '../config/grading'
+import { formatScholarName } from '../utils/helpers'
 import ConfirmModal from './ConfirmModal'
 
 const ScholarRecords = ({ onEditScholar }) => {
-  const { getScholarsBySchoolYear, getActiveScholars, getSchoolsList, deleteScholar, bulkUpdateScholars, bulkMarkAsGraduated } = useScholarStore()
+  const { getScholarsBySchoolYear, getActiveScholars, getSchoolsList, deleteScholar, bulkUpdateScholars, bulkMarkAsGraduated, scholars, showToast } = useScholarStore()
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterBarangay, setFilterBarangay] = useState('ALL')
@@ -16,10 +17,13 @@ const ScholarRecords = ({ onEditScholar }) => {
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [filterPWD, setFilterPWD] = useState('ALL')
   const [filterSoloParent, setFilterSoloParent] = useState('ALL')
+  const [filterGender, setFilterGender] = useState('ALL')
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scholar: null })
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkPaidConfirm, setBulkPaidConfirm] = useState(false)
+  const [bulkUnpaidConfirm, setBulkUnpaidConfirm] = useState(false)
   const [bulkGraduatedConfirm, setBulkGraduatedConfirm] = useState(false)
+  const [undoStack, setUndoStack] = useState(null)
 
   // Show only ACTIVE scholars
   const allScholars = getActiveScholars()
@@ -40,14 +44,15 @@ const ScholarRecords = ({ onEditScholar }) => {
     const matchesStatus = filterStatus === 'ALL' || scholar.status === filterStatus
     const matchesPWD = filterPWD === 'ALL' || (filterPWD === 'Yes' ? scholar.is_pwd === true : scholar.is_pwd === false)
     const matchesSoloParent = filterSoloParent === 'ALL' || (filterSoloParent === 'Yes' ? scholar.is_solo_parent === true : scholar.is_solo_parent === false)
+    const matchesGender = filterGender === 'ALL' || (scholar.gender || 'Male') === filterGender
 
-    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus && matchesPWD && matchesSoloParent
+    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus && matchesPWD && matchesSoloParent && matchesGender
   })
 
   // Reset selection when filters or search changes
   useEffect(() => {
     setSelectedIds([])
-  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus, filterPWD, filterSoloParent])
+  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus, filterPWD, filterSoloParent, filterGender])
 
   // Helper function to get latest GWA
   const getLatestGWA = (scholar) => {
@@ -88,6 +93,12 @@ const ScholarRecords = ({ onEditScholar }) => {
     }
   }
 
+  const handleBulkMarkAsUnpaid = () => {
+    if (selectedIds.length > 0) {
+      setBulkUnpaidConfirm(true)
+    }
+  }
+
   const handleBulkMarkAsGraduated = () => {
     if (selectedIds.length > 0) {
       setBulkGraduatedConfirm(true)
@@ -95,9 +106,57 @@ const ScholarRecords = ({ onEditScholar }) => {
   }
 
   const confirmBulkPaid = () => {
-    bulkUpdateScholars(selectedIds, { status: 'Paid' })
+    const affectedScholars = scholars.filter(s => selectedIds.includes(s.id))
+    const scholarsToChange = affectedScholars.filter(s => s.status !== 'Paid')
+    const alreadyPaid = affectedScholars.length - scholarsToChange.length
+    
+    // Save undo information
+    setUndoStack({
+      type: 'payment',
+      changes: scholarsToChange.map(s => ({ id: s.id, oldStatus: s.status }))
+    })
+    
+    // Apply changes
+    scholarsToChange.forEach(s => {
+      bulkUpdateScholars([s.id], { status: 'Paid' })
+    })
+    
+    // Show success message
+    let message = `Marked ${scholarsToChange.length} ${scholarsToChange.length === 1 ? 'scholar' : 'scholars'} as paid.`
+    if (alreadyPaid > 0) {
+      message += ` ${alreadyPaid} ${alreadyPaid === 1 ? 'was' : 'were'} already paid.`
+    }
+    showToast(message, 'success')
+    
     setSelectedIds([])
     setBulkPaidConfirm(false)
+  }
+
+  const confirmBulkUnpaid = () => {
+    const affectedScholars = scholars.filter(s => selectedIds.includes(s.id))
+    const scholarsToChange = affectedScholars.filter(s => s.status === 'Paid')
+    const alreadyProcessing = affectedScholars.length - scholarsToChange.length
+    
+    // Save undo information
+    setUndoStack({
+      type: 'payment',
+      changes: scholarsToChange.map(s => ({ id: s.id, oldStatus: s.status }))
+    })
+    
+    // Apply changes
+    scholarsToChange.forEach(s => {
+      bulkUpdateScholars([s.id], { status: 'Processing' })
+    })
+    
+    // Show success message
+    let message = `Marked ${scholarsToChange.length} ${scholarsToChange.length === 1 ? 'scholar' : 'scholars'} as unpaid (Processing).`
+    if (alreadyProcessing > 0) {
+      message += ` ${alreadyProcessing} ${alreadyProcessing === 1 ? 'was' : 'were'} already processing.`
+    }
+    showToast(message, 'success')
+    
+    setSelectedIds([])
+    setBulkUnpaidConfirm(false)
   }
 
   const confirmBulkGraduated = () => {
@@ -105,6 +164,24 @@ const ScholarRecords = ({ onEditScholar }) => {
     setSelectedIds([])
     setBulkGraduatedConfirm(false)
   }
+
+  const handleUndo = () => {
+    if (!undoStack) return
+    
+    if (undoStack.type === 'payment') {
+      undoStack.changes.forEach(change => {
+        bulkUpdateScholars([change.id], { status: change.oldStatus })
+      })
+      showToast('Changes undone', 'success')
+    }
+    
+    setUndoStack(null)
+  }
+
+  // Determine which buttons to show
+  const selectedScholars = scholars.filter(s => selectedIds.includes(s.id))
+  const hasProcessing = selectedScholars.some(s => s.status === 'Processing' || !s.status)
+  const hasPaid = selectedScholars.some(s => s.status === 'Paid')
 
   // Checkbox states
   const allSelected = filteredScholars.length > 0 && selectedIds.length === filteredScholars.length
@@ -146,7 +223,7 @@ const ScholarRecords = ({ onEditScholar }) => {
     <div className="space-y-5" style={{ maxWidth: '1600px', margin: '0 auto' }}>
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)', border: '1px solid #007AFF' }}>
+        <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: '#E6F0FF', border: '1px solid #007AFF' }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <CheckSquare className="w-5 h-5" style={{ color: '#007AFF' }} strokeWidth={1.5} />
@@ -166,16 +243,38 @@ const ScholarRecords = ({ onEditScholar }) => {
             </button>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={handleBulkMarkAsPaid}
-              className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
-              style={{ backgroundColor: '#10b981' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-            >
-              <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
-              Mark as Paid
-            </button>
+            {hasProcessing && (
+              <button
+                onClick={handleBulkMarkAsPaid}
+                className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
+                style={{ backgroundColor: '#10b981' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+              >
+                <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
+                Mark as Paid
+              </button>
+            )}
+            {hasPaid && (
+              <button
+                onClick={handleBulkMarkAsUnpaid}
+                className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2"
+                style={{ 
+                  backgroundColor: '#FFFFFF',
+                  color: '#F59E0B',
+                  border: '2px solid #F59E0B'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#FEF3C7'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#FFFFFF'
+                }}
+              >
+                <X className="w-4 h-4" strokeWidth={1.5} />
+                Mark as Unpaid
+              </button>
+            )}
             <button
               onClick={handleBulkMarkAsGraduated}
               className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
@@ -187,6 +286,24 @@ const ScholarRecords = ({ onEditScholar }) => {
               Mark as Graduated
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Undo Bar */}
+      {undoStack && (
+        <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: '#D1FAE5', border: '1px solid #10b981' }}>
+          <span className="font-semibold" style={{ color: '#1D1D1F' }}>
+            Changes applied
+          </span>
+          <button
+            onClick={handleUndo}
+            className="font-semibold px-4 py-2 rounded-lg transition-all shadow text-white"
+            style={{ backgroundColor: '#10b981' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+          >
+            Undo
+          </button>
         </div>
       )}
 
@@ -207,7 +324,7 @@ const ScholarRecords = ({ onEditScholar }) => {
           </div>
 
           {/* Filter Dropdowns - Grid layout for even spacing */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2.5">
             <select
               value={filterBarangay}
               onChange={(e) => setFilterBarangay(e.target.value)}
@@ -295,6 +412,17 @@ const ScholarRecords = ({ onEditScholar }) => {
               <option value="ALL">All Solo Parent</option>
               <option value="Yes">Solo Parent: Yes</option>
               <option value="No">Solo Parent: No</option>
+            </select>
+
+            <select
+              value={filterGender}
+              onChange={(e) => setFilterGender(e.target.value)}
+              className="rounded-lg text-xs py-2 px-3 h-9"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
+            >
+              <option value="ALL">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
           </div>
         </div>
@@ -389,8 +517,8 @@ const ScholarRecords = ({ onEditScholar }) => {
               ) : (
                 filteredScholars.map((scholar) => {
                   const isSelected = selectedIds.includes(scholar.id)
-                  const rowBgColor = isSelected ? 'rgba(0, 122, 255, 0.1)' : '#FFFFFF'
-                  const hoverBgColor = isSelected ? 'rgba(0, 122, 255, 0.1)' : '#F5F5F7'
+                  const rowBgColor = isSelected ? '#E6F0FF' : '#FFFFFF'
+                  const hoverBgColor = isSelected ? '#D6E7FF' : '#F5F5F7'
                   
                   return (
                     <tr 
@@ -454,7 +582,7 @@ const ScholarRecords = ({ onEditScholar }) => {
                         }}
                       >
                         <div className="font-semibold leading-snug" style={{ color: '#1D1D1F', wordWrap: 'break-word' }}>
-                          {scholar.lastName}, {scholar.firstName} {scholar.middleName}
+                          {formatScholarName(scholar, 'full')}
                         </div>
                       </td>
                       <td className="py-3 px-4" style={{ color: '#AAAAAA', borderBottom: '1px solid #E5E5EA' }}>
@@ -568,7 +696,7 @@ const ScholarRecords = ({ onEditScholar }) => {
         onClose={() => setDeleteConfirm({ isOpen: false, scholar: null })}
         onConfirm={confirmDelete}
         title="Delete Scholar?"
-        scholarName={deleteConfirm.scholar ? `${deleteConfirm.scholar.firstName} ${deleteConfirm.scholar.lastName}` : ''}
+        scholarName={deleteConfirm.scholar ? formatScholarName(deleteConfirm.scholar, 'firstLast') : ''}
         message="Are you sure you want to delete this scholar record?"
         confirmText="Delete"
         cancelText="Cancel"
@@ -585,6 +713,18 @@ const ScholarRecords = ({ onEditScholar }) => {
         confirmText="Mark as Paid"
         cancelText="Cancel"
         type="success"
+      />
+
+      {/* Bulk Unpaid Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bulkUnpaidConfirm}
+        onClose={() => setBulkUnpaidConfirm(false)}
+        onConfirm={confirmBulkUnpaid}
+        title="Mark as Unpaid?"
+        message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Unpaid (Processing)?`}
+        confirmText="Mark as Unpaid"
+        cancelText="Cancel"
+        type="warning"
       />
 
       {/* Bulk Graduated Confirmation Modal */}

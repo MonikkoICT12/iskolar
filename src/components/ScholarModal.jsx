@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Plus } from 'lucide-react'
-import useScholarStore, { BARANGAYS, SEMESTERS } from '../store/scholarStore'
+import useScholarStore from '../store/scholarStore'
+import { BARANGAYS } from '../config/barangays'
+import SEMESTER_OPTIONS, { getSemesterGradeLabel } from '../config/semesters'
+import { SUFFIXES } from '../config/suffixes'
 import { YEAR_LEVELS } from '../config/yearLevels'
 import { GRADING_CONFIG, validateGWA, formatGWA, isGWAWarning } from '../config/grading'
 import GraduateConfirmModal from './GraduateConfirmModal'
@@ -15,6 +18,8 @@ const ScholarModal = ({ scholar, onClose }) => {
     firstName: '',
     lastName: '',
     middleName: '',
+    suffix: 'None',
+    gender: 'Male',
     barangay: 'Atate',
     school: '',
     yearLevel: '1st Year',
@@ -40,16 +45,22 @@ const ScholarModal = ({ scholar, onClose }) => {
   // Get existing schools from the system
   const existingSchools = getAllSchoolsList()
 
-  // Grade entry state
+  // Grade entry state - semester will be synced from formData.semester
   const [newGrade, setNewGrade] = useState({
     schoolYear: '',
-    semester: GRADING_CONFIG.SEMESTERS[0],
     gwa: ''
   })
   const [gradeError, setGradeError] = useState('')
+  const [gradesError, setGradesError] = useState('')
 
   const handleAddGrade = () => {
-    if (!newGrade.schoolYear || !newGrade.semester || !newGrade.gwa) {
+    // Check if semester is selected in academic info
+    if (!formData.semester) {
+      setGradeError('Please select semester in Academic Information section first')
+      return
+    }
+
+    if (!newGrade.schoolYear || !newGrade.gwa) {
       setGradeError('Please fill in all grade fields')
       return
     }
@@ -62,7 +73,7 @@ const ScholarModal = ({ scholar, onClose }) => {
 
     const gradeEntry = {
       schoolYear: newGrade.schoolYear,
-      semester: newGrade.semester,
+      semester: getSemesterGradeLabel(formData.semester), // Use grade label from academic semester
       gwa: parseFloat(newGrade.gwa),
       createdAt: new Date().toISOString()
     }
@@ -74,13 +85,18 @@ const ScholarModal = ({ scholar, onClose }) => {
 
     setNewGrade({
       schoolYear: '',
-      semester: GRADING_CONFIG.SEMESTERS[0],
       gwa: ''
     })
     setGradeError('')
+    setGradesError('')
   }
 
   const handleRemoveGrade = (index) => {
+    // Don't allow removing last grade
+    if (formData.grades.length <= 1) {
+      return
+    }
+    
     setFormData(prev => ({
       ...prev,
       grades: prev.grades.filter((_, idx) => idx !== index)
@@ -199,10 +215,17 @@ const ScholarModal = ({ scholar, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setGradesError('')
 
     // Validate required fields
     if (!formData.firstName || !formData.lastName || !formData.school) {
       alert('Please fill in all required fields')
+      return
+    }
+
+    // Validate gender
+    if (!formData.gender) {
+      alert('Please select gender')
       return
     }
 
@@ -212,9 +235,33 @@ const ScholarModal = ({ scholar, onClose }) => {
       return
     }
 
+    // Check for pending grade (filled but not added)
+    let finalGrades = [...(formData.grades || [])]
+    if (newGrade.schoolYear && newGrade.gwa && formData.semester) {
+      const validation = validateGWA(newGrade.gwa)
+      if (validation.valid) {
+        // Auto-add the pending grade
+        const pendingGrade = {
+          schoolYear: newGrade.schoolYear,
+          semester: getSemesterGradeLabel(formData.semester),
+          gwa: parseFloat(newGrade.gwa),
+          createdAt: new Date().toISOString()
+        }
+        finalGrades = [...finalGrades, pendingGrade]
+      }
+    }
+
+    // REQUIRED GRADES VALIDATION
+    if (finalGrades.length === 0) {
+      setGradesError('Add at least one grade entry')
+      return
+    }
+
     // Convert scholarship_amount to number
     const dataToSubmit = {
       ...formData,
+      grades: finalGrades,
+      suffix: formData.suffix === 'None' ? null : formData.suffix,
       scholarship_amount: parseFloat(formData.scholarship_amount) || 0,
       amount: parseFloat(formData.scholarship_amount) || 0 // Keep amount for backward compatibility
     }
@@ -273,7 +320,7 @@ const ScholarModal = ({ scholar, onClose }) => {
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
               Personal Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
                   First Name <span className="text-red-500">*</span>
@@ -321,6 +368,24 @@ const ScholarModal = ({ scholar, onClose }) => {
                   className="w-full px-3 py-2 rounded-lg text-sm"
                   style={{ border: '1px solid #E5E5EA' }}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                  Suffix
+                </label>
+                <select
+                  name="suffix"
+                  value={formData.suffix || 'None'}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ border: '1px solid #E5E5EA' }}
+                >
+                  {SUFFIXES.map((suffix) => (
+                    <option key={suffix} value={suffix}>
+                      {suffix}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -463,21 +528,21 @@ const ScholarModal = ({ scholar, onClose }) => {
                 <>
                   <div>
                     <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                      Payment Status <span className="text-red-500">*</span>
+                      Payment Status
                     </label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-3 py-2 rounded-lg text-sm"
-                      style={{ border: '1px solid #E5E5EA' }}
-                    >
-                      <option value="Processing">Processing</option>
-                      <option value="Paid">Paid</option>
-                    </select>
+                    <div className="w-full px-3 py-2 rounded-lg text-sm flex items-center" style={{ border: '1px solid #E5E5EA', backgroundColor: '#F5F5F7' }}>
+                      <span
+                        className="px-3 py-1 rounded-md text-xs font-semibold"
+                        style={{
+                          backgroundColor: formData.status === 'Paid' ? '#D1FAE5' : '#FEF3C7',
+                          color: formData.status === 'Paid' ? '#065F46' : '#92400E',
+                        }}
+                      >
+                        {formData.status || 'Processing'}
+                      </span>
+                    </div>
                     <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                      Update payment status when released
+                      Payment status is changed using Mark as Paid or Mark as Unpaid in the Scholars tab.
                     </p>
                   </div>
                   <div>
@@ -582,12 +647,43 @@ const ScholarModal = ({ scholar, onClose }) => {
             </div>
           </div>
 
-          {/* PWD and Solo Parent */}
+          {/* Additional Information */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
               Additional Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="Male"
+                      checked={formData.gender === 'Male'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                      style={{ accentColor: '#007AFF' }}
+                    />
+                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Male</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="Female"
+                      checked={formData.gender === 'Female'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                      style={{ accentColor: '#007AFF' }}
+                    />
+                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Female</span>
+                  </label>
+                </div>
+              </div>
               <div>
                 <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
                   PWD (Person with Disability)
@@ -649,11 +745,15 @@ const ScholarModal = ({ scholar, onClose }) => {
             </div>
           </div>
 
-          {/* Grades */}
+          {/* Grades - REQUIRED */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Grades (Optional)
+              Grades <span className="text-red-500">*</span>
             </h3>
+            
+            {gradesError && (
+              <p className="text-xs mt-2 text-red-600">{gradesError}</p>
+            )}
             
             {/* Existing Grades */}
             {formData.grades && formData.grades.length > 0 && (
@@ -661,36 +761,43 @@ const ScholarModal = ({ scholar, onClose }) => {
                 <p className="text-xs font-semibold" style={{ color: '#AAAAAA' }}>Grade History</p>
                 {formData.grades
                   .sort((a, b) => b.schoolYear.localeCompare(a.schoolYear) || (b.createdAt || '').localeCompare(a.createdAt || ''))
-                  .map((grade, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                        {grade.schoolYear} - {grade.semester}
-                      </p>
-                      <p className={`text-lg font-bold ${isGWAWarning(grade.gwa) ? 'text-red-600' : ''}`} style={!isGWAWarning(grade.gwa) ? { color: '#10b981' } : {}}>
-                        GWA: {formatGWA(grade.gwa)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveGrade(index)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
-                      style={{
-                        color: '#DC2626',
-                        backgroundColor: 'transparent',
-                        border: '1px solid #DC2626',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FEE2E2'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                  .map((grade, index) => {
+                    const isLastGrade = formData.grades.length === 1
+                    return (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
+                            {grade.schoolYear} - {grade.semester}
+                          </p>
+                          <p className={`text-lg font-bold ${isGWAWarning(grade.gwa) ? 'text-red-600' : ''}`} style={!isGWAWarning(grade.gwa) ? { color: '#10b981' } : {}}>
+                            GWA: {formatGWA(grade.gwa)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGrade(index)}
+                          disabled={isLastGrade}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+                          style={{
+                            color: isLastGrade ? '#AAAAAA' : '#DC2626',
+                            backgroundColor: 'transparent',
+                            border: isLastGrade ? '1px solid #AAAAAA' : '1px solid #DC2626',
+                            opacity: isLastGrade ? 0.5 : 1,
+                            cursor: isLastGrade ? 'not-allowed' : 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isLastGrade) e.currentTarget.style.backgroundColor = '#FEE2E2'
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isLastGrade) e.currentTarget.style.backgroundColor = 'transparent'
+                          }}
+                          title={isLastGrade ? "A scholar must have at least one grade" : "Remove this grade"}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )
+                  })}
               </div>
             )}
 
@@ -715,16 +822,19 @@ const ScholarModal = ({ scholar, onClose }) => {
                   <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
                     Semester
                   </label>
-                  <select
-                    value={newGrade.semester}
-                    onChange={(e) => setNewGrade(prev => ({ ...prev, semester: e.target.value }))}
+                  <input
+                    type="text"
+                    value={formData.semester ? getSemesterGradeLabel(formData.semester) : ''}
+                    placeholder="Select semester above"
+                    disabled
                     className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ border: '1px solid #E5E5EA' }}
-                  >
-                    {GRADING_CONFIG.SEMESTERS.map((sem) => (
-                      <option key={sem} value={sem}>{sem}</option>
-                    ))}
-                  </select>
+                    style={{ 
+                      border: '1px solid #E5E5EA',
+                      backgroundColor: '#F5F5F7',
+                      color: '#AAAAAA',
+                      cursor: 'not-allowed'
+                    }}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>

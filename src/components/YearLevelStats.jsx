@@ -6,7 +6,7 @@ import { YEAR_LEVEL_COLORS, formatCurrency } from '../utils/helpers'
 const YearLevelStats = () => {
   const { getYearLevelStats, getTotalScholars, getTotalAmount } = useScholarStore()
 
-  const yearLevelStats = getYearLevelStats()
+  const yearLevelStats = getYearLevelStats(YEAR_LEVELS)
   const totalScholars = getTotalScholars()
   const totalAmount = getTotalAmount()
 

@@ -88,3 +88,33 @@ select:focus-visible {
   outline: 2px solid #007AFF;
   outline-offset: 2px;
 }
+
+/* Sticky table columns - inherit row background */
+tbody tr .sticky-col-left,
+tbody tr .sticky-col-name,
+tbody tr .sticky-col-actions {
+  background-color: inherit;
+}
+
+/* Smooth shadow for sticky columns during scroll */
+.sticky-col-name::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -8px;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.05), transparent);
+  pointer-events: none;
+}
+
+.sticky-col-actions::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.05), transparent);
+  pointer-events: none;
+}

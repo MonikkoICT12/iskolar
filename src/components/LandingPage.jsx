@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Award, Users, GraduationCap, School, TrendingUp, AlertCircle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import dataService from '../services/dataService'
+import { safeDivide, safePercentage } from '../utils/helpers'
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -145,87 +146,88 @@ const LandingPage = () => {
 
         {/* Summary Cards */}
         {dashboardData?.available && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {/* Total Scholars */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
-                  <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              {/* Total Scholars */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                    <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                  </div>
                 </div>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Total Scholars</p>
+                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_scholars || 0}</p>
               </div>
-              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Total Scholars</p>
-              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_scholars || 0}</p>
-            </div>
 
-            {/* Active Scholars */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                  <TrendingUp className="w-6 h-6" style={{ color: COLORS.success }} />
+              {/* Active Scholars */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                    <TrendingUp className="w-6 h-6" style={{ color: COLORS.success }} />
+                  </div>
                 </div>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Active Scholars</p>
+                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.active_scholars || 0}</p>
               </div>
-              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Active Scholars</p>
-              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.active_scholars || 0}</p>
-            </div>
 
-            {/* Graduates */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                  <GraduationCap className="w-6 h-6" style={{ color: COLORS.success }} />
+              {/* Graduates */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                    <GraduationCap className="w-6 h-6" style={{ color: COLORS.success }} />
+                  </div>
                 </div>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Graduates</p>
+                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.graduated_scholars || 0}</p>
               </div>
-              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Graduates</p>
-              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.graduated_scholars || 0}</p>
-            </div>
 
-            {/* Number of Schools */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
-                  <School className="w-6 h-6" style={{ color: COLORS.primary }} />
+              {/* Number of Schools */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                    <School className="w-6 h-6" style={{ color: COLORS.primary }} />
+                  </div>
                 </div>
-              </div>
-              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Schools</p>
-              <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_schools || 0}</p>
-            </div>
-
-            {/* PWD Scholars */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
-                  <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
-                </div>
-              </div>
-              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>PWD Scholars</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.pwd_count || 0}</p>
-                <p className="text-sm" style={{ color: COLORS.secondary }}>
-                  ({dashboardData.total_scholars > 0 
-                    ? ((dashboardData.pwd_count || 0) / dashboardData.total_scholars * 100).toFixed(1)
-                    : 0}%)
-                </p>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Schools</p>
+                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.total_schools || 0}</p>
               </div>
             </div>
 
-            {/* Solo Parent Scholars */}
-            <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
-                  <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+            {/* PWD and Solo Parent Cards - Moved up */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+              {/* PWD Scholars */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                    <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                  </div>
+                </div>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>PWD Scholars</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.pwd_count || 0}</p>
+                  <p className="text-sm" style={{ color: COLORS.secondary }}>
+                    ({safePercentage(dashboardData.pwd_count || 0, dashboardData.total_scholars).toFixed(1)}%)
+                  </p>
                 </div>
               </div>
-              <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Solo Parent Scholars</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.solo_parent_count || 0}</p>
-                <p className="text-sm" style={{ color: COLORS.secondary }}>
-                  ({dashboardData.total_scholars > 0 
-                    ? ((dashboardData.solo_parent_count || 0) / dashboardData.total_scholars * 100).toFixed(1)
-                    : 0}%)
-                </p>
+
+              {/* Solo Parent Scholars */}
+              <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}>
+                    <Users className="w-6 h-6" style={{ color: COLORS.primary }} />
+                  </div>
+                </div>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.secondary }}>Solo Parent Scholars</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold" style={{ color: COLORS.text }}>{dashboardData.solo_parent_count || 0}</p>
+                  <p className="text-sm" style={{ color: COLORS.secondary }}>
+                    ({safePercentage(dashboardData.solo_parent_count || 0, dashboardData.total_scholars).toFixed(1)}%)
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Charts Section */}

@@ -143,7 +143,7 @@ const ScholarRecords = ({ onEditScholar }) => {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" style={{ maxWidth: '1600px', margin: '0 auto' }}>
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
         <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)', border: '1px solid #007AFF' }}>
@@ -192,26 +192,26 @@ const ScholarRecords = ({ onEditScholar }) => {
 
       {/* Search and Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm p-4" style={{ border: '1px solid #E5E5EA' }}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Search Input */}
-          <div className="relative flex-grow max-w-md">
+        <div className="flex flex-col gap-4">
+          {/* Search Input - Full width, flexible */}
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search name, course, school, or barangay..."
-              className="w-full pl-9 pr-4 py-2 rounded-lg text-sm"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
+              placeholder="Search by name, course, school, or barangay..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm"
+              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F', minWidth: '280px' }}
             />
           </div>
 
-          {/* Filter Dropdowns */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Filter Dropdowns - Grid layout for even spacing */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
             <select
               value={filterBarangay}
               onChange={(e) => setFilterBarangay(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Barangays</option>
@@ -225,7 +225,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterSchool}
               onChange={(e) => setFilterSchool(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Schools</option>
@@ -239,7 +239,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Year Levels</option>
@@ -253,7 +253,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterSemester}
               onChange={(e) => setFilterSemester(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Semesters</option>
@@ -267,7 +267,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Status</option>
@@ -278,7 +278,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterPWD}
               onChange={(e) => setFilterPWD(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All PWD</option>
@@ -289,7 +289,7 @@ const ScholarRecords = ({ onEditScholar }) => {
             <select
               value={filterSoloParent}
               onChange={(e) => setFilterSoloParent(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3"
+              className="rounded-lg text-xs py-2 px-3 h-9"
               style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
             >
               <option value="ALL">All Solo Parent</option>
@@ -301,12 +301,12 @@ const ScholarRecords = ({ onEditScholar }) => {
       </div>
 
       {/* Main Scholar Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: '1px solid #E5E5EA' }}>
+      <div className="bg-white rounded-xl shadow-sm" style={{ border: '1px solid #E5E5EA' }}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse" style={{ minWidth: '1250px' }}>
             <thead className="font-semibold text-xs uppercase tracking-wider" style={{ backgroundColor: '#F5F5F7', color: '#1D1D1F' }}>
               <tr>
-                <th className="py-3 px-4 w-12">
+                <th className="py-3 px-4" style={{ width: '50px', position: 'sticky', left: 0, backgroundColor: '#F5F5F7', zIndex: 10 }}>
                   <button
                     onClick={handleSelectAll}
                     className="flex items-center justify-center w-full"
@@ -321,22 +321,22 @@ const ScholarRecords = ({ onEditScholar }) => {
                     )}
                   </button>
                 </th>
-                <th className="py-3 px-4">Scholar Name</th>
-                <th className="py-3 px-4">Barangay</th>
-                <th className="py-3 px-4">School</th>
-                <th className="py-3 px-4">Latest GWA</th>
-                <th className="py-3 px-4">Year Level</th>
-                <th className="py-3 px-4">Semester</th>
-                <th className="py-3 px-4">Course / Program</th>
-                <th className="py-3 px-4 text-right">Amount</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center no-print">Actions</th>
+                <th className="py-3 px-4" style={{ minWidth: '220px', position: 'sticky', left: '50px', backgroundColor: '#F5F5F7', zIndex: 10 }}>Scholar Name</th>
+                <th className="py-3 px-4" style={{ minWidth: '130px' }}>Barangay</th>
+                <th className="py-3 px-4" style={{ minWidth: '260px' }}>School</th>
+                <th className="py-3 px-4 text-center" style={{ minWidth: '100px' }}>Latest GWA</th>
+                <th className="py-3 px-4" style={{ minWidth: '100px' }}>Year Level</th>
+                <th className="py-3 px-4" style={{ minWidth: '90px' }}>Semester</th>
+                <th className="py-3 px-4" style={{ minWidth: '200px' }}>Course / Program</th>
+                <th className="py-3 px-4 text-right" style={{ minWidth: '110px' }}>Amount</th>
+                <th className="py-3 px-4 text-center" style={{ minWidth: '110px' }}>Status</th>
+                <th className="py-3 px-4 text-center no-print" style={{ width: '100px', position: 'sticky', right: 0, backgroundColor: '#F5F5F7', zIndex: 10 }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="text-xs sm:text-sm" style={{ borderTop: '1px solid #E5E5EA' }}>
+            <tbody className="text-sm" style={{ borderTop: '1px solid #E5E5EA' }}>
               {filteredScholars.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-slate-500">
+                  <td colSpan="11" className="py-12 text-center text-slate-500">
                     {allScholars.length === 0 ? (
                       <div className="flex flex-col items-center gap-2">
                         <UserPlus className="w-12 h-12 text-slate-300" />
@@ -352,10 +352,11 @@ const ScholarRecords = ({ onEditScholar }) => {
                 filteredScholars.map((scholar) => (
                   <tr 
                     key={scholar.id} 
-                    className={`transition-colors`}
+                    className="transition-colors"
                     style={{ 
                       borderBottom: '1px solid #E5E5EA',
-                      backgroundColor: selectedIds.includes(scholar.id) ? 'rgba(0, 122, 255, 0.1)' : 'transparent'
+                      backgroundColor: selectedIds.includes(scholar.id) ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+                      height: '60px'
                     }}
                     onMouseEnter={(e) => {
                       if (!selectedIds.includes(scholar.id)) {
@@ -368,7 +369,15 @@ const ScholarRecords = ({ onEditScholar }) => {
                       }
                     }}
                   >
-                    <td className="py-3 px-4">
+                    <td 
+                      className="py-3 px-4 sticky-col-left" 
+                      style={{ 
+                        position: 'sticky', 
+                        left: 0, 
+                        backgroundColor: 'inherit',
+                        zIndex: 9 
+                      }}
+                    >
                       <button
                         onClick={() => handleSelectOne(scholar.id)}
                         className="flex items-center justify-center w-full"
@@ -380,25 +389,35 @@ const ScholarRecords = ({ onEditScholar }) => {
                         )}
                       </button>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold" style={{ color: '#1D1D1F' }}>
+                    <td 
+                      className="py-3 px-4 sticky-col-name" 
+                      style={{ 
+                        position: 'sticky', 
+                        left: '50px', 
+                        backgroundColor: 'inherit',
+                        zIndex: 9 
+                      }}
+                    >
+                      <div className="font-semibold whitespace-nowrap" style={{ color: '#1D1D1F' }}>
                         {scholar.lastName}, {scholar.firstName} {scholar.middleName}
                       </div>
                     </td>
-                    <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.barangay}</td>
-                    <td className="py-3 px-4 text-xs max-w-xs truncate" style={{ color: '#AAAAAA' }}>
-                      {scholar.school}
+                    <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>
+                      <div className="whitespace-nowrap">{scholar.barangay}</div>
+                    </td>
+                    <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }} title={scholar.school}>
+                      <div className="line-clamp-2">{scholar.school}</div>
                     </td>
                     <td className="py-3 px-4 text-center">
                       {(() => {
                         const latestGWA = getLatestGWA(scholar)
                         if (!latestGWA) {
-                          return <span className="text-xs" style={{ color: '#AAAAAA' }}>No grades yet</span>
+                          return <span className="text-xs whitespace-nowrap" style={{ color: '#AAAAAA' }}>No grades</span>
                         }
                         const isWarning = isGWAWarning(latestGWA)
                         return (
                           <span 
-                            className={`text-sm font-bold ${isWarning ? 'text-red-600' : ''}`}
+                            className={`text-sm font-bold whitespace-nowrap ${isWarning ? 'text-red-600' : ''}`}
                             style={!isWarning ? { color: '#10b981' } : {}}
                           >
                             {formatGWA(latestGWA)}
@@ -406,24 +425,38 @@ const ScholarRecords = ({ onEditScholar }) => {
                         )
                       })()}
                     </td>
-                    <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>{scholar.yearLevel}</td>
-                    <td className="py-3 px-4">
-                      <span className="text-xs font-medium" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</span>
+                    <td className="py-3 px-4" style={{ color: '#AAAAAA' }}>
+                      <div className="whitespace-nowrap">{scholar.yearLevel}</div>
                     </td>
-                    <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }}>{scholar.course || '-'}</td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs font-medium whitespace-nowrap" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</span>
+                    </td>
+                    <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA' }} title={scholar.course}>
+                      <div className="line-clamp-2">{scholar.course || '-'}</div>
+                    </td>
                     <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981' }}>
-                      {formatCurrency(scholar.scholarship_amount || scholar.amount || 0)}
+                      <div className="whitespace-nowrap">
+                        {formatCurrency(scholar.scholarship_amount || scholar.amount || 0)}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span
-                        className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusBadge(
+                        className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${getStatusBadge(
                           scholar.status
                         )}`}
                       >
                         {scholar.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-center no-print">
+                    <td 
+                      className="py-3 px-4 text-center no-print sticky-col-actions" 
+                      style={{ 
+                        position: 'sticky', 
+                        right: 0, 
+                        backgroundColor: 'inherit',
+                        zIndex: 9 
+                      }}
+                    >
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => onEditScholar(scholar)}

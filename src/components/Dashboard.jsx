@@ -1,6 +1,6 @@
 import { Users, DollarSign, School, TrendingUp, Edit2, ArrowRight, Heart, User } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
-import { YEAR_LEVEL_COLORS, formatCurrency } from '../utils/helpers'
+import { YEAR_LEVEL_COLORS, formatCurrency, safeDivide, safePercentage } from '../utils/helpers'
 import { YEAR_LEVELS } from '../config/yearLevels'
 
 const Dashboard = ({ onEditScholar, onTabChange }) => {
@@ -25,8 +25,8 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
   const soloParentScholars = scholars.filter(s => s.is_solo_parent)
   const pwdCount = pwdScholars.length
   const soloParentCount = soloParentScholars.length
-  const pwdPercentage = totalScholars > 0 ? (pwdCount / totalScholars) * 100 : 0
-  const soloParentPercentage = totalScholars > 0 ? (soloParentCount / totalScholars) * 100 : 0
+  const pwdPercentage = safePercentage(pwdCount, totalScholars)
+  const soloParentPercentage = safePercentage(soloParentCount, totalScholars)
   
   // PWD breakdown by school
   const pwdBySchool = schools.map(school => {
@@ -164,6 +164,129 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
         </div>
       </div>
 
+      {/* PWD and Solo Parent Cards - Moved to top, compact design */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* PWD Scholars Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <Heart className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">PWD Scholars</h2>
+                <p className="text-xs text-slate-500">Persons with Disability</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-blue-600">{pwdCount}</p>
+              <p className="text-xs text-slate-500">{pwdPercentage.toFixed(1)}% of all</p>
+            </div>
+          </div>
+
+          {pwdCount === 0 ? (
+            <div className="text-center py-4 text-slate-500">
+              <p className="text-sm">No PWD scholars yet</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="p-2 rounded-lg" style={{ backgroundColor: '#EBF5FF', border: '1px solid #2196F3' }}>
+                  <p className="text-xs text-slate-600 font-semibold">Active</p>
+                  <p className="text-xl font-bold text-blue-600">{pwdScholars.filter(s => s.scholarStatus === 'Active' || !s.scholarStatus).length}</p>
+                </div>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: '#E8F5E9', border: '1px solid #4CAF50' }}>
+                  <p className="text-xs text-slate-600 font-semibold">Graduated</p>
+                  <p className="text-xl font-bold text-green-600">{pwdScholars.filter(s => s.scholarStatus === 'Graduated').length}</p>
+                </div>
+              </div>
+
+              {pwdBySchool.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2" style={{ color: '#AAAAAA' }}>Breakdown by School</p>
+                  <div className="space-y-1.5">
+                    {pwdBySchool.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <span className="text-slate-700 truncate flex-1">{item.school}</span>
+                        <div className="flex items-center gap-2 ml-2">
+                          <div className="w-12 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-blue-600 h-full rounded-full"
+                              style={{ width: `${safeDivide(item.count, pwdCount, 0) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="font-bold text-blue-600 w-4 text-right">{item.count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Solo Parent Scholars Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <User className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Solo Parent Scholars</h2>
+                <p className="text-xs text-slate-500">Single Parent Status</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-purple-600">{soloParentCount}</p>
+              <p className="text-xs text-slate-500">{soloParentPercentage.toFixed(1)}% of all</p>
+            </div>
+          </div>
+
+          {soloParentCount === 0 ? (
+            <div className="text-center py-4 text-slate-500">
+              <p className="text-sm">No solo parent scholars yet</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="p-2 rounded-lg" style={{ backgroundColor: '#F3E5F5', border: '1px solid #9C27B0' }}>
+                  <p className="text-xs text-slate-600 font-semibold">Active</p>
+                  <p className="text-xl font-bold text-purple-600">{soloParentScholars.filter(s => s.scholarStatus === 'Active' || !s.scholarStatus).length}</p>
+                </div>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: '#E8F5E9', border: '1px solid #4CAF50' }}>
+                  <p className="text-xs text-slate-600 font-semibold">Graduated</p>
+                  <p className="text-xl font-bold text-green-600">{soloParentScholars.filter(s => s.scholarStatus === 'Graduated').length}</p>
+                </div>
+              </div>
+
+              {soloParentBySchool.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2" style={{ color: '#AAAAAA' }}>Breakdown by School</p>
+                  <div className="space-y-1.5">
+                    {soloParentBySchool.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <span className="text-slate-700 truncate flex-1">{item.school}</span>
+                        <div className="flex items-center gap-2 ml-2">
+                          <div className="w-12 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-purple-600 h-full rounded-full"
+                              style={{ width: `${safeDivide(item.count, soloParentCount, 0) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="font-bold text-purple-600 w-4 text-right">{item.count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Two Column Overview Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Scholars Table */}
@@ -214,7 +337,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                       <td className="py-3 px-4 text-slate-600">{scholar.barangay}</td>
                       <td className="py-3 px-4 text-slate-600 text-xs">{scholar.school}</td>
                       <td className="py-3 px-4">
-                        <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-md">
+                        <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-md whitespace-nowrap">
                           {scholar.yearLevel}
                         </span>
                       </td>
@@ -247,7 +370,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
 
             <div className="space-y-5">
               {Object.entries(yearLevelStats).map(([level, stats]) => {
-                const percentage = totalScholars > 0 ? (stats.count / totalScholars) * 100 : 0
+                const percentage = safePercentage(stats.count, totalScholars)
                 const colorConfig = YEAR_LEVEL_COLORS[level] || YEAR_LEVEL_COLORS['1st Year']
                 return (
                   <div key={level}>
@@ -288,10 +411,9 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {schoolStats.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-slate-500">
-              <School className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p className="text-sm font-medium">No schools yet</p>
-              <p className="text-xs">Add scholars to see school breakdown</p>
+            <div className="col-span-full text-center py-8 text-slate-500">
+              <School className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm">No partner schools yet. Schools appear here automatically when you add a scholar.</p>
             </div>
           ) : (
             schoolStats.slice(0, 8).map((stat) => (
@@ -329,129 +451,6 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
                 </div>
               </div>
             ))
-          )}
-        </div>
-      </div>
-
-      {/* PWD and Solo Parent Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* PWD Scholars Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Heart className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">PWD Scholars</h2>
-                <p className="text-xs text-slate-500">Persons with Disability</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-black text-blue-600">{pwdCount}</p>
-              <p className="text-xs text-slate-500">{pwdPercentage.toFixed(1)}% of all</p>
-            </div>
-          </div>
-
-          {pwdCount === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <p className="text-sm">No PWD scholars yet</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: '#EBF5FF', border: '1px solid #2196F3' }}>
-                  <p className="text-xs text-slate-600 font-semibold">Active</p>
-                  <p className="text-2xl font-bold text-blue-600">{pwdScholars.filter(s => s.scholarStatus === 'Active' || !s.scholarStatus).length}</p>
-                </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: '#E8F5E9', border: '1px solid #4CAF50' }}>
-                  <p className="text-xs text-slate-600 font-semibold">Graduated</p>
-                  <p className="text-2xl font-bold text-green-600">{pwdScholars.filter(s => s.scholarStatus === 'Graduated').length}</p>
-                </div>
-              </div>
-
-              {pwdBySchool.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#AAAAAA' }}>Breakdown by School</p>
-                  <div className="space-y-2">
-                    {pwdBySchool.slice(0, 5).map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <span className="text-xs text-slate-700 truncate flex-1">{item.school}</span>
-                        <div className="flex items-center gap-2 ml-2">
-                          <div className="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
-                            <div
-                              className="bg-blue-600 h-full rounded-full"
-                              style={{ width: `${(item.count / pwdCount) * 100}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs font-bold text-blue-600 w-6 text-right">{item.count}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Solo Parent Scholars Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <User className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Solo Parent Scholars</h2>
-                <p className="text-xs text-slate-500">Single Parent Status</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-black text-purple-600">{soloParentCount}</p>
-              <p className="text-xs text-slate-500">{soloParentPercentage.toFixed(1)}% of all</p>
-            </div>
-          </div>
-
-          {soloParentCount === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <p className="text-sm">No solo parent scholars yet</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: '#F3E5F5', border: '1px solid #9C27B0' }}>
-                  <p className="text-xs text-slate-600 font-semibold">Active</p>
-                  <p className="text-2xl font-bold text-purple-600">{soloParentScholars.filter(s => s.scholarStatus === 'Active' || !s.scholarStatus).length}</p>
-                </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: '#E8F5E9', border: '1px solid #4CAF50' }}>
-                  <p className="text-xs text-slate-600 font-semibold">Graduated</p>
-                  <p className="text-2xl font-bold text-green-600">{soloParentScholars.filter(s => s.scholarStatus === 'Graduated').length}</p>
-                </div>
-              </div>
-
-              {soloParentBySchool.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#AAAAAA' }}>Breakdown by School</p>
-                  <div className="space-y-2">
-                    {soloParentBySchool.slice(0, 5).map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <span className="text-xs text-slate-700 truncate flex-1">{item.school}</span>
-                        <div className="flex items-center gap-2 ml-2">
-                          <div className="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
-                            <div
-                              className="bg-purple-600 h-full rounded-full"
-                              style={{ width: `${(item.count / soloParentCount) * 100}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs font-bold text-purple-600 w-6 text-right">{item.count}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
           )}
         </div>
       </div>

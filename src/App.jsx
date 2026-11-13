@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -15,6 +15,7 @@ import HelpModal from './components/HelpModal'
 import Toast from './components/Toast'
 import LandingPage from './components/LandingPage'
 import SignIn from './components/SignIn'
+import { cleanupLegacyStorage } from './utils/storageCleanup'
 
 function AdminLayout() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -87,6 +88,14 @@ function AdminLayout() {
 
 function App() {
   const { user, loading } = useAuth()
+
+  // Run storage cleanup on app initialization
+  useEffect(() => {
+    const result = cleanupLegacyStorage()
+    if (result.cleaned) {
+      console.log(`[App] ${result.message}`)
+    }
+  }, [])
 
   if (loading) {
     return (

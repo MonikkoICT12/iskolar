@@ -42,3 +42,14 @@ export const formatCurrency = (amount) => {
     minimumFractionDigits: 0,
   }).format(amount)
 }
+
+// Safe division helper - prevents divide by zero errors
+export const safeDivide = (numerator, denominator, fallback = 0) => {
+  if (!denominator || denominator === 0) return fallback
+  return numerator / denominator
+}
+
+// Safe percentage helper - prevents divide by zero errors
+export const safePercentage = (part, total) => {
+  return safeDivide(part * 100, total, 0)
+}

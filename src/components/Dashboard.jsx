@@ -1,7 +1,8 @@
-import { Users, DollarSign, School, TrendingUp, Edit2, ArrowRight, Heart, User } from 'lucide-react'
+import { Users, School, TrendingUp, Edit2, ArrowRight, Heart, User } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { YEAR_LEVEL_COLORS, formatCurrency, safeDivide, safePercentage } from '../utils/helpers'
 import { YEAR_LEVELS } from '../config/yearLevels'
+import PesoIcon from './PesoIcon'
 
 const Dashboard = ({ onEditScholar, onTabChange }) => {
   const {
@@ -97,7 +98,7 @@ const Dashboard = ({ onEditScholar, onTabChange }) => {
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
               <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg">
-                <DollarSign className="w-7 h-7" />
+                <PesoIcon className="w-7 h-7" strokeWidth={2} />
               </div>
               <span className="text-xs font-semibold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">BUDGET</span>
             </div>

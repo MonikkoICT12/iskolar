@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { School, Users, DollarSign, Eye, X } from 'lucide-react'
+import { School, Users, Eye, X } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { pluralizeScholar, formatCurrency } from '../utils/helpers'
 import Pagination from './Pagination'
+import PesoIcon from './PesoIcon'
 
 const SchoolSummary = () => {
   const { getSchoolStats, getTotalScholars, getTotalAmount, getScholarsBySchool } = useScholarStore()
@@ -228,7 +229,7 @@ const SchoolSummary = () => {
                         )}
                       </p>
                     </div>
-                    <DollarSign className="w-8 h-8" style={{ color: '#007AFF' }} strokeWidth={1.5} />
+                    <PesoIcon className="w-8 h-8" strokeWidth={1.5} style={{ color: '#007AFF' }} />
                   </div>
                 </div>
                 <div className="rounded-lg p-4" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>

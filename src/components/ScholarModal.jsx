@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Trash2, Plus } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import useScholarStore, { BARANGAYS, SEMESTERS } from '../store/scholarStore'
 import { YEAR_LEVELS } from '../config/yearLevels'
 import { GRADING_CONFIG, validateGWA, formatGWA, isGWAWarning } from '../config/grading'
 import GraduateConfirmModal from './GraduateConfirmModal'
+import SchoolAutocomplete from './SchoolAutocomplete'
 
 const ScholarModal = ({ scholar, onClose }) => {
   const { addScholar, updateScholar, getAllSchoolsList, bulkMarkAsGraduated } = useScholarStore()
@@ -35,10 +36,6 @@ const ScholarModal = ({ scholar, onClose }) => {
   const [showGraduateModal, setShowGraduateModal] = useState(false)
   const [scholarshipAmountDisplay, setScholarshipAmountDisplay] = useState('')
   const [scholarshipAmountError, setScholarshipAmountError] = useState('')
-
-  const [schoolSearch, setSchoolSearch] = useState(scholar?.school || '')
-  const [showSchoolDropdown, setShowSchoolDropdown] = useState(false)
-  const [filteredSchools, setFilteredSchools] = useState([])
 
   // Get existing schools from the system
   const existingSchools = getAllSchoolsList()
@@ -132,19 +129,7 @@ const ScholarModal = ({ scholar, onClose }) => {
     return value.replace(/,/g, '')
   }
 
-  useEffect(() => {
-    if (schoolSearch) {
-      // Filter by matching each word separately (case-insensitive)
-      const searchWords = schoolSearch.toLowerCase().split(/\s+/).filter(Boolean)
-      const filtered = existingSchools.filter(school => {
-        const schoolLower = school.toLowerCase()
-        return searchWords.every(word => schoolLower.includes(word))
-      })
-      setFilteredSchools(filtered)
-    } else {
-      setFilteredSchools(existingSchools)
-    }
-  }, [schoolSearch, existingSchools])
+
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -187,25 +172,12 @@ const ScholarModal = ({ scholar, onClose }) => {
     }
   }
 
-  const handleSchoolInputChange = (e) => {
-    const value = e.target.value
-    setSchoolSearch(value)
+  const handleSchoolChange = (value) => {
     setFormData((prev) => ({ ...prev, school: value }))
-    setShowSchoolDropdown(true)
   }
 
   const handleSchoolSelect = (school) => {
-    setSchoolSearch(school)
     setFormData((prev) => ({ ...prev, school: school }))
-    setShowSchoolDropdown(false)
-  }
-
-  const handleCreateNewSchool = () => {
-    const normalizedName = schoolSearch.trim().replace(/\s+/g, ' ')
-    if (normalizedName) {
-      setFormData((prev) => ({ ...prev, school: normalizedName }))
-      setShowSchoolDropdown(false)
-    }
   }
 
   const handleKeyDown = (e) => {
@@ -388,79 +360,18 @@ const ScholarModal = ({ scholar, onClose }) => {
               Academic Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div className="md:col-span-3 relative">
+              <div className="md:col-span-3">
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
                   School / University <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="school"
-                  value={schoolSearch}
-                  onChange={handleSchoolInputChange}
-                  onFocus={() => setShowSchoolDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowSchoolDropdown(false), 200)}
-                  required
+                <SchoolAutocomplete
+                  value={formData.school}
+                  onChange={handleSchoolChange}
+                  onSelect={handleSchoolSelect}
+                  existingSchools={existingSchools}
+                  isEditMode={isEditing}
                   placeholder={isEditing ? "Select from existing schools..." : "Type school name or select from existing..."}
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
                 />
-                {showSchoolDropdown && filteredSchools.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto" style={{ border: '1px solid #E5E5EA' }}>
-                    {filteredSchools.map((school, index) => {
-                      // Highlight matching text
-                      const searchWords = schoolSearch.toLowerCase().split(/\s+/).filter(Boolean)
-                      const parts = []
-                      let currentText = school
-                      
-                      searchWords.forEach(word => {
-                        const regex = new RegExp(`(${word})`, 'gi')
-                        const tempParts = []
-                        currentText.split(regex).forEach(part => {
-                          if (part.toLowerCase() === word.toLowerCase()) {
-                            tempParts.push(<strong key={Math.random()}>{part}</strong>)
-                          } else if (part) {
-                            tempParts.push(part)
-                          }
-                        })
-                        currentText = tempParts
-                      })
-
-                      return (
-                        <div
-                          key={index}
-                          onClick={() => handleSchoolSelect(school)}
-                          className="px-3 py-2 cursor-pointer text-sm border-b last:border-b-0"
-                          style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          {typeof currentText === 'string' ? school : currentText}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-                {showSchoolDropdown && filteredSchools.length === 0 && schoolSearch && (
-                  <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg px-3 py-2" style={{ border: '1px solid #E5E5EA' }}>
-                    {!isEditing ? (
-                      <div
-                        onClick={handleCreateNewSchool}
-                        className="cursor-pointer"
-                      >
-                        <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
-                          Use "{schoolSearch.trim().replace(/\s+/g, ' ')}" as a new school
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                          This will be added to the system
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs" style={{ color: '#AAAAAA' }}>
-                        No matching schools found. Please select from existing schools.
-                      </p>
-                    )}
-                  </div>
-                )}
                 <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
                   {isEditing 
                     ? "Select from existing schools only" 
@@ -763,9 +674,20 @@ const ScholarModal = ({ scholar, onClose }) => {
                     <button
                       type="button"
                       onClick={() => handleRemoveGrade(index)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+                      style={{
+                        color: '#DC2626',
+                        backgroundColor: 'transparent',
+                        border: '1px solid #DC2626',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#FEE2E2'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      Remove
                     </button>
                   </div>
                 ))}

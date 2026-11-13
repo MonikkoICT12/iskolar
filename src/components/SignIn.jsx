@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Award, AlertCircle } from 'lucide-react'
+import { Award, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 const SignIn = () => {
   const navigate = useNavigate()
@@ -10,6 +10,7 @@ const SignIn = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const COLORS = {
     primary: '#007AFF',
@@ -29,6 +30,9 @@ const SignIn = () => {
       navigate('/admin')
     } catch (err) {
       console.error('Sign in error:', err)
+      
+      // Hide password on failed login
+      setShowPassword(false)
       
       // Friendly error messages
       if (err.message?.includes('Invalid login credentials')) {
@@ -135,27 +139,49 @@ const SignIn = () => {
               >
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full px-4 py-2 rounded-lg text-sm transition-all duration-150"
-                style={{
-                  border: '1px solid #E5E5EA',
-                  color: COLORS.text,
-                  backgroundColor: loading ? '#F5F5F7' : '#FFFFFF',
-                }}
-                onFocus={(e) => {
-                  if (!loading) e.currentTarget.style.borderColor = COLORS.primary
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E5E5EA'
-                }}
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-2 pr-10 rounded-lg text-sm transition-all duration-150"
+                  style={{
+                    border: '1px solid #E5E5EA',
+                    color: COLORS.text,
+                    backgroundColor: loading ? '#F5F5F7' : '#FFFFFF',
+                  }}
+                  onFocus={(e) => {
+                    if (!loading) e.currentTarget.style.borderColor = COLORS.primary
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#E5E5EA'
+                  }}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 transition-colors disabled:opacity-50"
+                  style={{ color: COLORS.secondary }}
+                  onMouseEnter={(e) => {
+                    if (!loading) e.currentTarget.style.color = COLORS.text
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) e.currentTarget.style.color = COLORS.secondary
+                  }}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Sign In Button */}

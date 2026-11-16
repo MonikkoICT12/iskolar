@@ -15,6 +15,7 @@ import HelpModal from './components/HelpModal'
 import Toast from './components/Toast'
 import LandingPage from './components/LandingPage'
 import SignIn from './components/SignIn'
+import ErrorBoundary from './components/ErrorBoundary'
 import { cleanupLegacyStorage } from './utils/storageCleanup'
 
 function AdminLayout() {
@@ -36,21 +37,21 @@ function AdminLayout() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard onEditScholar={handleEditScholar} onTabChange={setActiveTab} />
+        return <ErrorBoundary><Dashboard onEditScholar={handleEditScholar} onTabChange={setActiveTab} /></ErrorBoundary>
       case 'lgu-system':
-        return <LGUSystemPage />
+        return <ErrorBoundary><LGUSystemPage /></ErrorBoundary>
       case 'scholars':
-        return <ScholarRecords onEditScholar={handleEditScholar} />
+        return <ErrorBoundary><ScholarRecords onEditScholar={handleEditScholar} /></ErrorBoundary>
       case 'schools':
-        return <SchoolsTab />
+        return <ErrorBoundary><SchoolsTab /></ErrorBoundary>
       case 'graduates':
-        return <GraduatesTab />
+        return <ErrorBoundary><GraduatesTab /></ErrorBoundary>
       case 'yearlevel':
-        return <YearLevelStats />
+        return <ErrorBoundary><YearLevelStats /></ErrorBoundary>
       case 'reports':
-        return <BackupReports />
+        return <ErrorBoundary><BackupReports /></ErrorBoundary>
       default:
-        return <Dashboard onEditScholar={handleEditScholar} onTabChange={setActiveTab} />
+        return <ErrorBoundary><Dashboard onEditScholar={handleEditScholar} onTabChange={setActiveTab} /></ErrorBoundary>
     }
   }
 
@@ -115,26 +116,38 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Landing Page - Public */}
-      <Route path="/" element={<LandingPage />} />
+    <ErrorBoundary>
+      <Routes>
+        {/* Landing Page - Public */}
+        <Route path="/" element={
+          <ErrorBoundary>
+            <LandingPage />
+          </ErrorBoundary>
+        } />
 
-      {/* Sign In - Public */}
-      <Route path="/signin" element={<SignIn />} />
+        {/* Sign In - Public */}
+        <Route path="/signin" element={
+          <ErrorBoundary>
+            <SignIn />
+          </ErrorBoundary>
+        } />
 
-      {/* Admin Routes - Protected */}
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute>
-            <AdminLayout />
-          </ProtectedRoute>
-        } 
-      />
+        {/* Admin Routes - Protected */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <AdminLayout />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          } 
+        />
 
-      {/* Catch all - redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Catch all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   )
 }
 

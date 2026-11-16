@@ -4,6 +4,9 @@ import { X, Plus } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { BARANGAYS } from '../config/barangays'
 import SEMESTER_OPTIONS, { getSemesterGradeLabel } from '../config/semesters'
+
+// Extract semester values for the dropdown
+const SEMESTERS = SEMESTER_OPTIONS.map(opt => opt.value)
 import { SUFFIXES } from '../config/suffixes'
 import { YEAR_LEVELS } from '../config/yearLevels'
 import { GRADING_CONFIG, validateGWA, formatGWA, isGWAWarning } from '../config/grading'

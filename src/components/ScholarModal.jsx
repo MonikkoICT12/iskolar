@@ -323,7 +323,7 @@ const ScholarModal = ({ scholar, onClose }) => {
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
               Personal Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
                   First Name <span className="text-red-500">*</span>
@@ -388,6 +388,22 @@ const ScholarModal = ({ scholar, onClose }) => {
                       {suffix}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ border: '1px solid #E5E5EA' }}
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
                 </select>
               </div>
             </div>
@@ -655,38 +671,7 @@ const ScholarModal = ({ scholar, onClose }) => {
             <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
               Additional Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="Male"
-                      checked={formData.gender === 'Male'}
-                      onChange={handleChange}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#007AFF' }}
-                    />
-                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Male</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="Female"
-                      checked={formData.gender === 'Female'}
-                      onChange={handleChange}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#007AFF' }}
-                    />
-                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Female</span>
-                  </label>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
                   PWD (Person with Disability)

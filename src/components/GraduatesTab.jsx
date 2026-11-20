@@ -1,17 +1,58 @@
-import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { Search, Eye, X, GraduationCap, RotateCcw } from 'lucide-react'
+import { useState } from 'react'
+import { Search, Eye, GraduationCap, RotateCcw } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { formatScholarName } from '../utils/helpers'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const GraduatesTab = () => {
-  const { 
+  const {
     getGraduatedSchoolsList,
     getGraduatedScholarsBySchool,
-    getGraduationYears,
+    getGraduatedScholars,
     returnToActive,
   } = useScholarStore()
-  
+
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -19,7 +60,8 @@ const GraduatesTab = () => {
   const [confirmReturnModal, setConfirmReturnModal] = useState(false)
   const [scholarToReturn, setScholarToReturn] = useState(null)
 
-  const schools = getGraduatedSchoolsList() // Schools with graduated scholars
+  const schools = getGraduatedSchoolsList()
+  const totalGraduates = getGraduatedScholars().length
 
   const handleViewGraduates = (school) => {
     setSelectedSchool(school)
@@ -33,12 +75,12 @@ const GraduatesTab = () => {
     setConfirmReturnModal(true)
   }
 
-  const confirmReturn = () => {
+  const confirmReturn = async () => {
     if (scholarToReturn) {
-      returnToActive(scholarToReturn.id)
+      const ok = await returnToActive(scholarToReturn.id)
+      if (!ok) return
       setConfirmReturnModal(false)
       setScholarToReturn(null)
-      // Close view modal if no more graduates for this school
       const remainingGraduates = getGraduatedScholarsBySchool(selectedSchool)
       if (remainingGraduates.length === 0) {
         setViewModalOpen(false)
@@ -46,365 +88,242 @@ const GraduatesTab = () => {
     }
   }
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (viewModalOpen || confirmReturnModal) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-      document.body.style.overflow = 'hidden'
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-
-      return () => {
-        document.body.style.overflow = ''
-        document.body.style.paddingRight = ''
-      }
-    }
-  }, [viewModalOpen, confirmReturnModal])
+  const schoolGraduates = selectedSchool
+    ? getGraduatedScholarsBySchool(selectedSchool)
+    : []
+  const graduateYears = [
+    ...new Set(schoolGraduates.map((s) => s.yearGraduated).filter(Boolean)),
+  ].sort((a, b) => b - a)
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2" style={{ color: '#1D1D1F' }}>
-          Graduates
-        </h2>
-        <p style={{ color: '#AAAAAA' }}>
-          View graduated scholars by school.
-        </p>
+    <div className="w-full space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fade-up">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+            Graduates Directory
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            View graduated scholars grouped by institution.
+          </p>
+        </div>
+        <Badge variant="success" className="self-start sm:self-auto px-3 py-1">
+          {totalGraduates} Total {totalGraduates === 1 ? 'Graduate' : 'Graduates'}
+        </Badge>
       </div>
 
-      {/* Graduates Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: '1px solid #E5E5EA' }}>
-        <table className="w-full">
-          <thead style={{ backgroundColor: '#F5F5F7' }}>
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                School / University
-              </th>
-              <th className="px-6 py-3 text-center text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                Graduates
-              </th>
-              <th className="px-6 py-3 text-right text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="overflow-hidden animate-fade-up" style={{ animationDelay: '60ms' }}>
+        <Table wrapperClassName="max-h-[calc(100vh-16rem)] min-h-[280px]">
+          <TableHeader className="sticky top-0 z-20 bg-[#F6F6F1] shadow-[0_1px_0_0_hsl(var(--border))]">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>School / University</TableHead>
+              <TableHead className="text-center">Graduates</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {schools.length === 0 ? (
-              <tr>
-                <td colSpan="3" className="px-6 py-12 text-center" style={{ color: '#AAAAAA' }}>
-                  <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <TableRow>
+                <TableCell colSpan={3} className="py-12 text-center text-muted-foreground">
+                  <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-40" />
                   <p>No graduates yet.</p>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
-              schools.map((school, index) => {
+              schools.map((school) => {
                 const graduateCount = getGraduatedScholarsBySchool(school).length
                 return (
-                  <tr 
-                    key={index}
-                    className="border-t cursor-pointer"
-                    style={{ borderColor: '#E5E5EA' }}
+                  <TableRow
+                    key={school}
+                    className="cursor-pointer"
                     onClick={() => handleViewGraduates(school)}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <td className="px-6 py-4" style={{ color: '#1D1D1F' }}>
+                    <TableCell className="font-semibold text-foreground">
                       <div className="flex items-center gap-3">
-                        <GraduationCap className="w-5 h-5" style={{ color: '#10b981' }} />
-                        <span className="font-medium">{school}</span>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand/15 to-brand-soft/45 border border-border flex items-center justify-center flex-shrink-0">
+                          <GraduationCap className="w-4 h-4 text-brand" />
+                        </div>
+                        <span>{school}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-center" style={{ color: '#AAAAAA' }}>
-                      {graduateCount} {graduateCount === 1 ? 'graduate' : 'graduates'}
-                    </td>
-                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleViewGraduates(school)}
-                          className="p-2 rounded-lg transition-all duration-150"
-                          style={{ color: '#10b981' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }}
-                          title="View graduates"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="gold">
+                        {graduateCount}{' '}
+                        {graduateCount === 1 ? 'graduate' : 'graduates'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewGraduates(school)}
+                            aria-label="View graduates"
+                          >
+                            <Eye className="w-4 h-4 text-brand" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>View graduates</TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
-      {/* View Graduates Modal */}
-      {viewModalOpen && selectedSchool && createPortal(
-        <div 
-          className="fixed z-[100]" 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100dvh',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setViewModalOpen(false)
-          }}
-        >
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: '#E5E5EA' }}>
-              <div>
-                <h3 className="text-xl font-semibold" style={{ color: '#1D1D1F' }}>
-                  {selectedSchool} - Graduates
-                </h3>
-                <p className="text-sm mt-1" style={{ color: '#AAAAAA' }}>
-                  {getGraduatedScholarsBySchool(selectedSchool).length} {getGraduatedScholarsBySchool(selectedSchool).length === 1 ? 'graduate' : 'graduates'}
-                </p>
-              </div>
-              <button
-                onClick={() => setViewModalOpen(false)}
-                className="p-2 rounded-lg transition-all"
-                style={{ color: '#AAAAAA' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* View Graduates Dialog */}
+      <Dialog
+        open={viewModalOpen && !!selectedSchool}
+        onOpenChange={(open) => !open && setViewModalOpen(false)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b border-border bg-gradient-to-r from-brand/10 to-brand-soft/25">
+            <DialogTitle>{selectedSchool} — Graduates</DialogTitle>
+            <DialogDescription>
+              {schoolGraduates.length}{' '}
+              {schoolGraduates.length === 1 ? 'graduate' : 'graduates'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="px-6 py-3 border-b border-border flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 w-4 h-4 text-brand" />
+              <Input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name or course..."
+                className="pl-9"
+              />
             </div>
 
-            {/* Search and Filter */}
-            <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: '#E5E5EA' }}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by name or course..."
-                  className="w-full pl-9 pr-4 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-                />
-              </div>
-              
-              {/* Year Filter */}
-              {(() => {
-                const schoolGraduates = getGraduatedScholarsBySchool(selectedSchool)
-                const years = [...new Set(schoolGraduates.map(s => s.yearGraduated).filter(Boolean))].sort((a, b) => b - a)
-                
-                if (years.length > 1) {
-                  return (
-                    <div>
-                      <select
-                        value={yearFilter}
-                        onChange={(e) => setYearFilter(e.target.value)}
-                        className="rounded-lg text-sm py-2 px-3"
-                        style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-                      >
-                        <option value="ALL">All Years</option>
-                        {years.map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )
-                }
-                return null
-              })()}
-            </div>
-
-            {/* Graduates Table */}
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full">
-                <thead style={{ backgroundColor: '#F5F5F7', position: 'sticky', top: 0 }}>
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Full Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Course
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Year Graduated
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getGraduatedScholarsBySchool(selectedSchool)
-                    .filter(s => {
-                      const matchesSearch = !searchTerm || 
-                        formatScholarName(s, 'firstLast').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        (s.course || '').toLowerCase().includes(searchTerm.toLowerCase())
-                      
-                      const matchesYear = yearFilter === 'ALL' || s.yearGraduated == yearFilter
-                      
-                      return matchesSearch && matchesYear
-                    })
-                    .map((scholar, idx) => (
-                      <tr 
-                        key={idx} 
-                        className="border-t"
-                        style={{ borderColor: '#E5E5EA' }}
-                      >
-                        <td className="px-6 py-3 text-sm" style={{ color: '#1D1D1F' }}>
-                          {formatScholarName(scholar, 'full')}
-                        </td>
-                        <td className="px-6 py-3 text-sm" style={{ color: '#AAAAAA' }}>
-                          {scholar.course || '-'}
-                        </td>
-                        <td className="px-6 py-3 text-center text-sm font-semibold" style={{ color: '#10b981' }}>
-                          {scholar.yearGraduated || '-'}
-                        </td>
-                        <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleReturnToActive(scholar)}
-                              className="p-2 rounded-lg transition-all duration-150"
-                              style={{ color: '#007AFF' }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgba(0, 122, 255, 0.1)'
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent'
-                              }}
-                              title="Return to Active"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+            {graduateYears.length > 1 && (
+              <div className="w-full sm:w-44">
+                <Select value={yearFilter} onValueChange={setYearFilter}>
+                  <SelectTrigger aria-label="Filter by Graduation Year">
+                    <SelectValue placeholder="All Years" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Years</SelectItem>
+                    {graduateYears.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        Batch {year}
+                      </SelectItem>
                     ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t flex justify-end" style={{ borderColor: '#E5E5EA' }}>
-              <button
-                onClick={() => setViewModalOpen(false)}
-                className="px-4 py-2 rounded-lg font-medium transition-all"
-                style={{ 
-                  backgroundColor: '#10b981',
-                  color: '#FFFFFF',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-              >
-                Close
-              </button>
-            </div>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-        </div>,
-        document.body
-      )}
 
-      {/* Return to Active Confirmation Modal */}
-      {confirmReturnModal && scholarToReturn && createPortal(
-        <div 
-          className="fixed z-[110]" 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100dvh',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setConfirmReturnModal(false)
-              setScholarToReturn(null)
-            }
-          }}
-        >
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: '#E5E5EA' }}>
-              <h3 className="text-xl font-semibold" style={{ color: '#1D1D1F' }}>
-                Return to Active Status
-              </h3>
-              <button
-                onClick={() => {
-                  setConfirmReturnModal(false)
-                  setScholarToReturn(null)
-                }}
-                className="p-2 rounded-lg transition-all"
-                style={{ color: '#AAAAAA' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          <div className="flex-1 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead className="text-center">Year Graduated</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {schoolGraduates
+                  .filter((s) => {
+                    const matchesSearch =
+                      !searchTerm ||
+                      formatScholarName(s, 'firstLast')
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                      (s.course || '')
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
 
-            {/* Modal Body */}
-            <div className="px-6 py-6">
-              <p className="mb-4" style={{ color: '#1D1D1F' }}>
-                Return <strong>{formatScholarName(scholarToReturn, 'firstLast')}</strong> to active status?
-              </p>
-              <p className="text-sm" style={{ color: '#AAAAAA' }}>
-                This scholar will be removed from Graduates and returned to the Scholars tab.
-              </p>
-            </div>
+                    const matchesYear =
+                      yearFilter === 'ALL' ||
+                      String(s.yearGraduated) === String(yearFilter)
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: '#E5E5EA' }}>
-              <button
-                onClick={() => {
-                  setConfirmReturnModal(false)
-                  setScholarToReturn(null)
-                }}
-                className="px-4 py-2 rounded-lg font-medium transition-all"
-                style={{ 
-                  backgroundColor: '#F5F5F7',
-                  color: '#1D1D1F',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E5EA'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmReturn}
-                className="px-4 py-2 rounded-lg font-medium transition-all"
-                style={{ 
-                  backgroundColor: '#007AFF',
-                  color: '#FFFFFF',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
-              >
-                Confirm Return
-              </button>
-            </div>
+                    return matchesSearch && matchesYear
+                  })
+                  .map((scholar) => (
+                    <TableRow key={scholar.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {formatScholarName(scholar, 'full')}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {scholar.course || '-'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="success">
+                          {scholar.yearGraduated || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleReturnToActive(scholar)}
+                              aria-label="Return to Active"
+                            >
+                              <RotateCcw className="w-4 h-4 text-brand" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Return to Active</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
           </div>
-        </div>,
-        document.body
-      )}
+
+          <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50">
+            <Button variant="gradient" onClick={() => setViewModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Return to Active AlertDialog */}
+      <AlertDialog
+        open={confirmReturnModal && !!scholarToReturn}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmReturnModal(false)
+            setScholarToReturn(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Return to Active Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              Return{' '}
+              <strong>
+                {scholarToReturn
+                  ? formatScholarName(scholarToReturn, 'firstLast')
+                  : ''}
+              </strong>{' '}
+              to active status? This scholar will move back from Graduates to the
+              Scholars tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmReturn}>
+              Confirm Return
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

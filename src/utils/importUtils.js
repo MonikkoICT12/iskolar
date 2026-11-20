@@ -163,12 +163,23 @@ function parseScholarRow(row, headers, rowIndex) {
     indices[field] = findColumnIndex(headers, field)
   })
   
-  // Extract values
+  const MAX_CELL_LENGTH = 255
+
+  // Extract and sanitize string values (strip control chars and leading formula operators)
   const getValue = (field) => {
     const idx = indices[field]
-    return idx >= 0 ? String(row[idx] || '').trim() : ''
+    if (idx < 0) return ''
+    const raw = String(row[idx] ?? '')
+      .replace(/[\u0000-\u001F\u007F]/g, '')
+      .trim()
+      .replace(/^['=+\-@]+(?=[A-Za-z(])/, '')
+      .slice(0, MAX_CELL_LENGTH)
+    return raw
   }
-  
+
+  const rawAmount = getValue('scholarship_amount')
+  const parsedAmount = rawAmount ? parseFloat(rawAmount) : 0
+
   const data = {
     firstName: getValue('firstName'),
     lastName: getValue('lastName'),
@@ -181,9 +192,10 @@ function parseScholarRow(row, headers, rowIndex) {
     yearLevel: parseYearLevel(getValue('yearLevel')),
     is_pwd: parseBoolean(getValue('is_pwd')),
     is_solo_parent: parseBoolean(getValue('is_solo_parent')),
-    scholarship_amount: parseFloat(getValue('scholarship_amount')) || 0,
-    status: getValue('status') || 'Processing',
-    scholarStatus: getValue('scholarStatus') || 'Active',
+    scholarship_amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+    status: getValue('status') === 'Paid' ? 'Paid' : 'Processing',
+    scholarStatus:
+      getValue('scholarStatus') === 'Graduated' ? 'Graduated' : 'Active',
     yearGraduated: getValue('yearGraduated'),
     grades: []
   }
@@ -223,9 +235,9 @@ function parseScholarRow(row, headers, rowIndex) {
     errors.push(`Invalid Year Level: ${getValue('yearLevel')}`)
   }
   
-  // Validate scholarship amount
-  if (data.scholarship_amount < 0) {
-    errors.push('Scholarship Amount must be a positive number')
+  // Validate scholarship amount bounds
+  if (data.scholarship_amount < 0 || data.scholarship_amount > 1000000) {
+    errors.push('Scholarship Amount must be between 0 and 1,000,000')
   }
   
   // Add grade entry if GWA is provided
@@ -260,6 +272,8 @@ function parseScholarRow(row, headers, rowIndex) {
   }
 }
 
+const MAX_IMPORT_ROWS = 5000
+
 /**
  * Parse CSV file
  * @param {File} file - CSV file
@@ -268,21 +282,28 @@ function parseScholarRow(row, headers, rowIndex) {
 export function parseCSV(file) {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
+      skipEmptyLines: true,
+      preview: MAX_IMPORT_ROWS + 1,
       complete: (results) => {
         if (!results.data || results.data.length === 0) {
           reject(new Error('CSV file is empty'))
           return
         }
-        
+
         const headers = results.data[0]
-        const rows = results.data.slice(1).filter(row => 
-          row.some(cell => cell && String(cell).trim())
+        const rows = results.data.slice(1).filter(row =>
+          Array.isArray(row) && row.some(cell => cell && String(cell).trim())
         )
-        
-        const parsed = rows.map((row, idx) => 
+
+        if (rows.length > MAX_IMPORT_ROWS) {
+          reject(new Error(`Import exceeds maximum allowed ${MAX_IMPORT_ROWS} rows per file.`))
+          return
+        }
+
+        const parsed = rows.map((row, idx) =>
           parseScholarRow(row, headers, idx + 2) // +2 because of header and 1-indexing
         )
-        
+
         resolve(parsed)
       },
       error: (error) => {
@@ -300,40 +321,61 @@ export function parseCSV(file) {
 export function parseExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    
+
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result)
-        const workbook = XLSX.read(data, { type: 'array' })
-        
-        // Get first sheet
+        const workbook = XLSX.read(data, {
+          type: 'array',
+          cellFormula: false,
+          cellHTML: false,
+          cellNF: false,
+          cellStyles: false,
+          sheetRows: MAX_IMPORT_ROWS + 2,
+        })
+
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          reject(new Error('Excel file has no worksheets'))
+          return
+        }
+
+        // Get first sheet safely
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
-        
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+          header: 1,
+          defval: '',
+        })
+
         if (!jsonData || jsonData.length === 0) {
           reject(new Error('Excel file is empty'))
           return
         }
-        
+
         const headers = jsonData[0]
-        const rows = jsonData.slice(1).filter(row => 
+        const rows = jsonData.slice(1).filter(row =>
+          Array.isArray(row) &&
           row.some(cell => cell !== null && cell !== undefined && String(cell).trim())
         )
-        
-        const parsed = rows.map((row, idx) => 
+
+        if (rows.length > MAX_IMPORT_ROWS) {
+          reject(new Error(`Import exceeds maximum allowed ${MAX_IMPORT_ROWS} rows per file.`))
+          return
+        }
+
+        const parsed = rows.map((row, idx) =>
           parseScholarRow(row, headers, idx + 2)
         )
-        
+
         resolve(parsed)
       } catch (error) {
         reject(new Error(`Failed to parse Excel: ${error.message}`))
       }
     }
-    
+
     reader.onerror = () => {
       reject(new Error('Failed to read file'))
     }
-    
+
     reader.readAsArrayBuffer(file)
   })
 }
@@ -375,15 +417,18 @@ export function detectDuplicates(existingScholars, newScholars) {
  * @returns {object} { valid: boolean, error: string, type: string }
  */
 export function validateFileType(file) {
-  const allowedTypes = [
-    'text/csv',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  ]
-  
+  if (!file || typeof file.name !== 'string') {
+    return {
+      valid: false,
+      error: 'Invalid file.',
+      type: null
+    }
+  }
+
   const allowedExtensions = ['.csv', '.xls', '.xlsx']
-  const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-  
+  const dotIdx = file.name.lastIndexOf('.')
+  const fileExtension = dotIdx >= 0 ? file.name.substring(dotIdx).toLowerCase() : ''
+
   if (!allowedExtensions.includes(fileExtension)) {
     return {
       valid: false,
@@ -391,30 +436,37 @@ export function validateFileType(file) {
       type: null
     }
   }
-  
+
   // Determine file type
   let type = 'csv'
   if (fileExtension === '.xls' || fileExtension === '.xlsx') {
     type = 'excel'
   }
-  
+
   return { valid: true, error: null, type }
 }
 
 /**
- * Validate file size (max 10MB)
+ * Validate file size (non-empty, max 5MB)
  * @param {File} file - File to validate
  * @returns {object} { valid: boolean, error: string }
  */
 export function validateFileSize(file) {
-  const maxSize = 10 * 1024 * 1024 // 10MB
-  
+  const maxSize = 5 * 1024 * 1024 // 5MB
+
+  if (!file || file.size <= 0) {
+    return {
+      valid: false,
+      error: 'File is empty.'
+    }
+  }
+
   if (file.size > maxSize) {
     return {
       valid: false,
-      error: 'File is too large. Maximum size is 10MB.'
+      error: 'File is too large. Maximum size is 5MB.'
     }
   }
-  
+
   return { valid: true, error: null }
 }

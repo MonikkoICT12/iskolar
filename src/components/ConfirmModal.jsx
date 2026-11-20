@@ -1,214 +1,99 @@
-import { useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
-const ConfirmModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
+const ConfirmModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
   title = 'Confirm Action',
   message,
   scholarName,
   confirmText = 'Delete',
   cancelText = 'Cancel',
-  type = 'danger' // danger, warning, info
+  type = 'danger', // danger, warning, success, info
 }) => {
-  const modalRef = useRef(null)
-  const cancelButtonRef = useRef(null)
-
-  useEffect(() => {
-    if (isOpen) {
-      // Focus the cancel button when modal opens
-      cancelButtonRef.current?.focus()
-      
-      // Prevent body scroll and prevent layout shift
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-      document.body.style.overflow = 'hidden'
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-    } else {
-      document.body.style.overflow = ''
-      document.body.style.paddingRight = ''
-    }
-
-    return () => {
-      document.body.style.overflow = ''
-      document.body.style.paddingRight = ''
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-
-    const handleTab = (e) => {
-      if (!isOpen) return
-
-      const focusableElements = modalRef.current?.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-      
-      if (!focusableElements || focusableElements.length === 0) return
-
-      const firstElement = focusableElements[0]
-      const lastElement = focusableElements[focusableElements.length - 1]
-
-      if (e.key === 'Tab') {
-        if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
-            e.preventDefault()
-            lastElement.focus()
-          }
-        } else {
-          if (document.activeElement === lastElement) {
-            e.preventDefault()
-            firstElement.focus()
-          }
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleEscape)
-    document.addEventListener('keydown', handleTab)
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.removeEventListener('keydown', handleTab)
-    }
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
+  const typeStyles = {
+    danger: {
+      iconBg: 'bg-red-100 text-red-600 border-red-200',
+      title: 'text-red-950',
+      actionVariant: 'destructive',
+    },
+    warning: {
+      iconBg: 'bg-highlight/25 text-foreground border-highlight/50',
+      title: 'text-foreground',
+      actionVariant: 'gold',
+    },
+    success: {
+      iconBg: 'bg-brand/15 text-brand border-border',
+      title: 'text-foreground',
+      actionVariant: 'gradient',
+    },
+    info: {
+      iconBg: 'bg-brand/15 text-brand border-border',
+      title: 'text-foreground',
+      actionVariant: 'default',
+    },
   }
 
-  const getTypeStyles = () => {
-    switch (type) {
-      case 'danger':
-        return {
-          icon: 'text-red-600',
-          iconBg: 'bg-red-100',
-          title: 'text-red-900',
-          confirmBtn: 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-        }
-      case 'warning':
-        return {
-          icon: 'text-amber-600',
-          iconBg: 'bg-amber-100',
-          title: 'text-amber-900',
-          confirmBtn: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
-        }
-      case 'success':
-        return {
-          icon: 'text-emerald-600',
-          iconBg: 'bg-emerald-100',
-          title: 'text-emerald-900',
-          confirmBtn: 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
-        }
-      default:
-        return {
-          icon: 'text-indigo-600',
-          iconBg: 'bg-indigo-100',
-          title: 'text-indigo-900',
-          confirmBtn: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
-        }
-    }
-  }
+  const style = typeStyles[type] || typeStyles.danger
 
-  const styles = getTypeStyles()
-
-  return createPortal(
-    <div 
-      className="fixed z-[100]"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100dvh',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem'
-      }}
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      aria-describedby="modal-description"
-    >
-      <div 
-        ref={modalRef}
-        className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-scale-in"
-      >
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}>
-                <AlertTriangle className={`w-6 h-6 ${styles.icon}`} />
-              </div>
-              <div>
-                <h3 
-                  id="modal-title"
-                  className={`text-lg font-bold ${styles.title} mb-1`}
-                >
-                  {title}
-                </h3>
-                {scholarName && (
-                  <p className="text-sm font-semibold text-slate-700 mb-2">
-                    {scholarName}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 transition p-1 rounded-lg hover:bg-slate-100"
-              aria-label="Close dialog"
+  return (
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <div className="flex items-start gap-4">
+            <div
+              className={cn(
+                'w-11 h-11 rounded-2xl border flex items-center justify-center flex-shrink-0',
+                style.iconBg
+              )}
             >
-              <X className="w-5 h-5" />
-            </button>
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <AlertDialogTitle className={style.title}>
+                {title}
+              </AlertDialogTitle>
+              {scholarName && (
+                <p className="text-sm font-semibold text-foreground">
+                  {scholarName}
+                </p>
+              )}
+              <AlertDialogDescription className="text-muted-foreground">
+                {message}
+              </AlertDialogDescription>
+              <p className="text-xs font-semibold text-foreground/80 pt-1">
+                This action cannot be undone.
+              </p>
+            </div>
           </div>
-        </div>
+        </AlertDialogHeader>
 
-        {/* Body */}
-        <div className="px-6 pb-6">
-          <p id="modal-description" className="text-sm text-slate-600 mb-1">
-            {message}
-          </p>
-          <p className="text-sm font-semibold text-slate-800">
-            This action cannot be undone.
-          </p>
-        </div>
-
-        {/* Footer */}
-        <div className="bg-slate-50 px-6 py-4 flex items-center justify-end gap-3 rounded-b-xl">
-          <button
-            ref={cancelButtonRef}
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-slate-400"
-          >
-            {cancelText}
-          </button>
-          <button
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>{cancelText}</AlertDialogCancel>
+          <AlertDialogAction
             onClick={() => {
               onConfirm()
               onClose()
             }}
-            className={`px-4 py-2 text-sm font-semibold text-white rounded-lg transition focus:outline-none focus:ring-2 ${styles.confirmBtn}`}
+            className={cn(buttonVariants({ variant: style.actionVariant }))}
           >
             {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

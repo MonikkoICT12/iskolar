@@ -44,14 +44,17 @@ CREATE INDEX IF NOT EXISTS idx_scholars_status ON scholars(status);
 CREATE INDEX IF NOT EXISTS idx_scholars_year_level ON scholars(year_level);
 CREATE INDEX IF NOT EXISTS idx_admins_username ON admins(username);
 
--- Create updated_at trigger function
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+-- Create updated_at trigger function (immutable search_path)
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create triggers for updated_at
 DROP TRIGGER IF EXISTS update_scholars_updated_at ON scholars;
@@ -71,91 +74,57 @@ CREATE TRIGGER update_admins_updated_at
 -- Enable RLS on scholars table
 ALTER TABLE scholars ENABLE ROW LEVEL SECURITY;
 
--- Scholars can only read their own record
-CREATE POLICY "Scholars can view own record"
-  ON scholars
-  FOR SELECT
-  USING (
-    auth.jwt() ->> 'role' = 'scholar' AND
-    school_id = auth.jwt() ->> 'school_id'
-  );
+-- Drop legacy policies if re-running
+DROP POLICY IF EXISTS "Scholars can view own record" ON scholars;
+DROP POLICY IF EXISTS "Admins have full access to scholars" ON scholars;
+DROP POLICY IF EXISTS "Anonymous users cannot access scholars" ON scholars;
 
--- Admins can do everything
+-- Admins (server-managed app_metadata role) can access scholars
+-- Note: Run supabase-admin-rls.sql to set up public.admin_users & public.is_admin()
 CREATE POLICY "Admins have full access to scholars"
   ON scholars
   FOR ALL
-  USING (auth.jwt() ->> 'role' = 'admin');
+  TO authenticated
+  USING (COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin')
+  WITH CHECK (COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin');
 
--- Anonymous users can't access scholars
-CREATE POLICY "Anonymous users cannot access scholars"
-  ON scholars
-  FOR ALL
-  USING (false);
-
--- Enable RLS on admins table
+-- Enable RLS on legacy admins table and block client API access
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE admins FROM public, anon, authenticated;
 
--- Only admins can read admin table
-CREATE POLICY "Admins can view all admins"
+DROP POLICY IF EXISTS "Admins can view all admins" ON admins;
+DROP POLICY IF EXISTS "Deny client access to admins" ON admins;
+CREATE POLICY "Deny client access to admins"
   ON admins
-  FOR SELECT
-  USING (auth.jwt() ->> 'role' = 'admin');
+  FOR ALL
+  TO public
+  USING (false)
+  WITH CHECK (false);
 
--- Insert default admin (password: admin123)
--- Note: In production, use proper password hashing with bcrypt
--- This is a bcrypt hash of "admin123"
-INSERT INTO admins (username, password_hash, full_name, email)
-VALUES (
-  'admin',
-  '$2a$10$rJZjvGy5Y5F5F5F5F5F5F.F5F5F5F5F5F5F5F5F5F5F5F5F5F5F5F',
-  'System Administrator',
-  'admin@iskolar.ph'
-)
-ON CONFLICT (username) DO NOTHING;
+-- Note: Create administrator accounts securely via Supabase Dashboard -> Authentication -> Users
+-- and register them with supabase-admin-rls.sql (never seed hardcoded default passwords).
 
--- Create a function to check if school_id exists
-CREATE OR REPLACE FUNCTION check_school_id_exists(p_school_id VARCHAR)
-RETURNS BOOLEAN AS $$
+-- Legacy utility functions restricted strictly to authenticated admins (no anon access)
+CREATE OR REPLACE FUNCTION public.check_school_id_exists(p_school_id VARCHAR)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
+  IF COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
   RETURN EXISTS (
-    SELECT 1 FROM scholars 
+    SELECT 1 FROM public.scholars
     WHERE LOWER(school_id) = LOWER(p_school_id)
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
--- Create a function to verify scholar credentials
-CREATE OR REPLACE FUNCTION verify_scholar_credentials(
-  p_school VARCHAR,
-  p_school_id VARCHAR,
-  p_school_year VARCHAR
-)
-RETURNS TABLE (
-  id UUID,
-  school_id VARCHAR,
-  first_name VARCHAR,
-  last_name VARCHAR,
-  school VARCHAR
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    s.id,
-    s.school_id,
-    s.first_name,
-    s.last_name,
-    s.school
-  FROM scholars s
-  WHERE 
-    LOWER(s.school) = LOWER(p_school) AND
-    LOWER(s.school_id) = LOWER(p_school_id) AND
-    s.school_year = p_school_year;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Grant execute permissions
-GRANT EXECUTE ON FUNCTION check_school_id_exists TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION verify_scholar_credentials TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.check_school_id_exists(VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.check_school_id_exists(VARCHAR) TO authenticated;
 
 -- Comments for documentation
 COMMENT ON TABLE scholars IS 'Stores scholarship recipient information';

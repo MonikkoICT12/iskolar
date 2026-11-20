@@ -1,745 +1,1198 @@
-import { useState, useEffect } from 'react'
-import { Search, Edit2, Trash2, Eye, UserPlus, CheckSquare, Square, MinusSquare, X } from 'lucide-react'
-import useScholarStore, { BARANGAYS, SEMESTERS } from '../store/scholarStore'
-import { YEAR_LEVELS } from '../config/yearLevels'
-import { formatGWA, isGWAWarning } from '../config/grading'
-import { formatScholarName } from '../utils/helpers'
-import ConfirmModal from './ConfirmModal'
+import { useState, useEffect, useMemo } from "react";
+import {
+  Search,
+  Edit2,
+  Trash2,
+  UserPlus,
+  CheckSquare,
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
+  SlidersHorizontal,
+  Plus,
+} from "lucide-react";
+import useScholarStore, { BARANGAYS, SEMESTERS } from "../store/scholarStore";
+import { YEAR_LEVELS } from "../config/yearLevels";
+import { formatGWA, isGWAWarning } from "../config/grading";
+import { formatScholarName } from "../utils/helpers";
+import ConfirmModal from "./ConfirmModal";
+import Pagination from "./Pagination";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const ScholarRecords = ({ onEditScholar }) => {
-  const { getScholarsBySchoolYear, getActiveScholars, getSchoolsList, deleteScholar, bulkUpdateScholars, bulkMarkAsGraduated, scholars, showToast } = useScholarStore()
-  
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterBarangay, setFilterBarangay] = useState('ALL')
-  const [filterSchool, setFilterSchool] = useState('ALL')
-  const [filterYear, setFilterYear] = useState('ALL')
-  const [filterSemester, setFilterSemester] = useState('ALL')
-  const [filterStatus, setFilterStatus] = useState('ALL')
-  const [filterPWD, setFilterPWD] = useState('ALL')
-  const [filterSoloParent, setFilterSoloParent] = useState('ALL')
-  const [filterGender, setFilterGender] = useState('ALL')
-  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scholar: null })
-  const [selectedIds, setSelectedIds] = useState([])
-  const [bulkPaidConfirm, setBulkPaidConfirm] = useState(false)
-  const [bulkUnpaidConfirm, setBulkUnpaidConfirm] = useState(false)
-  const [bulkGraduatedConfirm, setBulkGraduatedConfirm] = useState(false)
-  const [undoStack, setUndoStack] = useState(null)
+const ScholarRecords = ({ onEditScholar, onAddScholar }) => {
+  const {
+    getActiveScholars,
+    getSchoolsList,
+    deleteScholar,
+    bulkUpdateScholars,
+    bulkMarkAsGraduated,
+    scholars,
+    showToast,
+  } = useScholarStore();
 
-  // Show only ACTIVE scholars
-  const allScholars = getActiveScholars()
-  const schools = getSchoolsList()
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterBarangay, setFilterBarangay] = useState("ALL");
+  const [filterSchool, setFilterSchool] = useState("ALL");
+  const [filterYear, setFilterYear] = useState("ALL");
+  const [filterSemester, setFilterSemester] = useState("ALL");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [filterPWD, setFilterPWD] = useState("ALL");
+  const [filterSoloParent, setFilterSoloParent] = useState("ALL");
+  const [filterGender, setFilterGender] = useState("ALL");
 
-  const filteredScholars = allScholars.filter((scholar) => {
-    const matchesSearch =
-      searchTerm === '' ||
-      `${scholar.firstName} ${scholar.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scholar.course?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scholar.school?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scholar.barangay?.toLowerCase().includes(searchTerm.toLowerCase())
+  const [sortConfig, setSortConfig] = useState({
+    key: "name",
+    direction: "asc",
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
-    const matchesBarangay = filterBarangay === 'ALL' || scholar.barangay === filterBarangay
-    const matchesSchool = filterSchool === 'ALL' || scholar.school === filterSchool
-    const matchesYear = filterYear === 'ALL' || scholar.yearLevel === filterYear
-    const matchesSemester = filterSemester === 'ALL' || scholar.semester === filterSemester
-    const matchesStatus = filterStatus === 'ALL' || scholar.status === filterStatus
-    const matchesPWD = filterPWD === 'ALL' || (filterPWD === 'Yes' ? scholar.is_pwd === true : scholar.is_pwd === false)
-    const matchesSoloParent = filterSoloParent === 'ALL' || (filterSoloParent === 'Yes' ? scholar.is_solo_parent === true : scholar.is_solo_parent === false)
-    const matchesGender = filterGender === 'ALL' || (scholar.gender || 'Male') === filterGender
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    scholar: null,
+  });
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkPaidConfirm, setBulkPaidConfirm] = useState(false);
+  const [bulkUnpaidConfirm, setBulkUnpaidConfirm] = useState(false);
+  const [bulkGraduatedConfirm, setBulkGraduatedConfirm] = useState(false);
 
-    return matchesSearch && matchesBarangay && matchesSchool && matchesYear && matchesSemester && matchesStatus && matchesPWD && matchesSoloParent && matchesGender
-  })
+  const allScholars = getActiveScholars();
+  const schools = getSchoolsList();
 
-  // Reset selection when filters or search changes
-  useEffect(() => {
-    setSelectedIds([])
-  }, [searchTerm, filterBarangay, filterSchool, filterYear, filterSemester, filterStatus, filterPWD, filterSoloParent, filterGender])
-
-  // Helper function to get latest GWA
   const getLatestGWA = (scholar) => {
-    if (!scholar.grades || scholar.grades.length === 0) return null
+    if (!scholar.grades || scholar.grades.length === 0) return null;
     const sorted = [...scholar.grades].sort((a, b) => {
-      if (a.schoolYear !== b.schoolYear) {
-        return b.schoolYear.localeCompare(a.schoolYear)
+      const syA = a.schoolYear || "";
+      const syB = b.schoolYear || "";
+      if (syA !== syB) {
+        return syB.localeCompare(syA);
       }
-      return (b.createdAt || '').localeCompare(a.createdAt || '')
-    })
-    return sorted[0].gwa
-  }
+      return (b.createdAt || "").localeCompare(a.createdAt || "");
+    });
+    return sorted[0].gwa;
+  };
 
-  // Selection handlers
-  const handleSelectAll = () => {
-    if (selectedIds.length === filteredScholars.length) {
-      setSelectedIds([])
-    } else {
-      setSelectedIds(filteredScholars.map(s => s.id))
+  const filteredScholars = useMemo(() => {
+    return allScholars.filter((scholar) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        `${scholar.firstName} ${scholar.lastName}`
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        scholar.course?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        scholar.school?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        scholar.barangay?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesBarangay =
+        filterBarangay === "ALL" || scholar.barangay === filterBarangay;
+      const matchesSchool =
+        filterSchool === "ALL" || scholar.school === filterSchool;
+      const matchesYear =
+        filterYear === "ALL" || scholar.yearLevel === filterYear;
+      const matchesSemester =
+        filterSemester === "ALL" || scholar.semester === filterSemester;
+      const matchesStatus =
+        filterStatus === "ALL" || scholar.status === filterStatus;
+      const matchesPWD =
+        filterPWD === "ALL" ||
+        (filterPWD === "Yes"
+          ? scholar.is_pwd === true
+          : scholar.is_pwd === false);
+      const matchesSoloParent =
+        filterSoloParent === "ALL" ||
+        (filterSoloParent === "Yes"
+          ? scholar.is_solo_parent === true
+          : scholar.is_solo_parent === false);
+      const matchesGender =
+        filterGender === "ALL" || (scholar.gender || "Male") === filterGender;
+
+      return (
+        matchesSearch &&
+        matchesBarangay &&
+        matchesSchool &&
+        matchesYear &&
+        matchesSemester &&
+        matchesStatus &&
+        matchesPWD &&
+        matchesSoloParent &&
+        matchesGender
+      );
+    });
+  }, [
+    allScholars,
+    searchTerm,
+    filterBarangay,
+    filterSchool,
+    filterYear,
+    filterSemester,
+    filterStatus,
+    filterPWD,
+    filterSoloParent,
+    filterGender,
+  ]);
+
+  const sortedScholars = useMemo(() => {
+    const list = [...filteredScholars];
+    const dir = sortConfig.direction === "asc" ? 1 : -1;
+
+    list.sort((a, b) => {
+      switch (sortConfig.key) {
+        case "name":
+          return (
+            formatScholarName(a, "lastFirst").localeCompare(
+              formatScholarName(b, "lastFirst"),
+            ) * dir
+          );
+        case "barangay":
+          return (a.barangay || "").localeCompare(b.barangay || "") * dir;
+        case "school":
+          return (a.school || "").localeCompare(b.school || "") * dir;
+        case "yearLevel":
+          return (a.yearLevel || "").localeCompare(b.yearLevel || "") * dir;
+        case "gwa": {
+          const gA = getLatestGWA(a);
+          const gB = getLatestGWA(b);
+          if (gA === null && gB === null) return 0;
+          if (gA === null) return 1;
+          if (gB === null) return -1;
+          return (Number(gA) - Number(gB)) * dir;
+        }
+        case "amount":
+          return (
+            ((parseFloat(a.scholarship_amount || a.amount) || 0) -
+              (parseFloat(b.scholarship_amount || b.amount) || 0)) *
+            dir
+          );
+        case "status":
+          return (a.status || "").localeCompare(b.status || "") * dir;
+        default:
+          return 0;
+      }
+    });
+
+    return list;
+  }, [filteredScholars, sortConfig]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedScholars.length / itemsPerPage),
+  );
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedScholars = useMemo(() => {
+    const start = (safePage - 1) * itemsPerPage;
+    return sortedScholars.slice(start, start + itemsPerPage);
+  }, [sortedScholars, safePage, itemsPerPage]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+    setCurrentPage(1);
+  }, [
+    searchTerm,
+    filterBarangay,
+    filterSchool,
+    filterYear,
+    filterSemester,
+    filterStatus,
+    filterPWD,
+    filterSoloParent,
+    filterGender,
+    itemsPerPage,
+  ]);
+
+  const secondaryFilterCount = [
+    filterSemester !== "ALL",
+    filterPWD !== "ALL",
+    filterSoloParent !== "ALL",
+    filterGender !== "ALL",
+  ].filter(Boolean).length;
+
+  const activeFilterCount =
+    [
+      searchTerm !== "",
+      filterBarangay !== "ALL",
+      filterSchool !== "ALL",
+      filterYear !== "ALL",
+      filterStatus !== "ALL",
+    ].filter(Boolean).length + secondaryFilterCount;
+
+  const handleResetSecondaryFilters = () => {
+    setFilterSemester("ALL");
+    setFilterPWD("ALL");
+    setFilterSoloParent("ALL");
+    setFilterGender("ALL");
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setFilterBarangay("ALL");
+    setFilterSchool("ALL");
+    setFilterYear("ALL");
+    setFilterSemester("ALL");
+    setFilterStatus("ALL");
+    setFilterPWD("ALL");
+    setFilterSoloParent("ALL");
+    setFilterGender("ALL");
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="w-3.5 h-3.5 opacity-45" />;
     }
-  }
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="w-3.5 h-3.5 text-brand" />
+    ) : (
+      <ArrowDown className="w-3.5 h-3.5 text-brand" />
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (
+      filteredScholars.length > 0 &&
+      selectedIds.length === filteredScholars.length
+    ) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredScholars.map((s) => s.id));
+    }
+  };
 
   const handleSelectOne = (id) => {
-    setSelectedIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(selectedId => selectedId !== id)
-        : [...prev, id]
-    )
-  }
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((selectedId) => selectedId !== id)
+        : [...prev, id],
+    );
+  };
 
-  const handleClearSelection = () => {
-    setSelectedIds([])
-  }
+  const triggerUndoPayment = async (changes) => {
+    const paidIds = changes
+      .filter((c) => c.oldStatus === "Paid")
+      .map((c) => c.id);
+    const processingIds = changes
+      .filter((c) => c.oldStatus !== "Paid")
+      .map((c) => c.id);
 
-  const handleBulkMarkAsPaid = () => {
-    if (selectedIds.length > 0) {
-      setBulkPaidConfirm(true)
+    let ok = true;
+    if (paidIds.length > 0) {
+      ok =
+        (await bulkUpdateScholars(
+          paidIds,
+          { status: "Paid" },
+          { silent: true },
+        )) && ok;
     }
-  }
-
-  const handleBulkMarkAsUnpaid = () => {
-    if (selectedIds.length > 0) {
-      setBulkUnpaidConfirm(true)
+    if (processingIds.length > 0) {
+      ok =
+        (await bulkUpdateScholars(
+          processingIds,
+          { status: "Processing" },
+          { silent: true },
+        )) && ok;
     }
-  }
-
-  const handleBulkMarkAsGraduated = () => {
-    if (selectedIds.length > 0) {
-      setBulkGraduatedConfirm(true)
+    if (ok) {
+      showToast("Payment changes undone", "success");
     }
-  }
+  };
 
-  const confirmBulkPaid = () => {
-    const affectedScholars = scholars.filter(s => selectedIds.includes(s.id))
-    const scholarsToChange = affectedScholars.filter(s => s.status !== 'Paid')
-    const alreadyPaid = affectedScholars.length - scholarsToChange.length
-    
-    // Save undo information
-    setUndoStack({
-      type: 'payment',
-      changes: scholarsToChange.map(s => ({ id: s.id, oldStatus: s.status }))
-    })
-    
-    // Apply changes
-    scholarsToChange.forEach(s => {
-      bulkUpdateScholars([s.id], { status: 'Paid' })
-    })
-    
-    // Show success message
-    let message = `Marked ${scholarsToChange.length} ${scholarsToChange.length === 1 ? 'scholar' : 'scholars'} as paid.`
+  const confirmBulkPaid = async () => {
+    const affectedScholars = scholars.filter((s) => selectedIds.includes(s.id));
+    const scholarsToChange = affectedScholars.filter(
+      (s) => s.status !== "Paid",
+    );
+    const alreadyPaid = affectedScholars.length - scholarsToChange.length;
+
+    if (scholarsToChange.length === 0) {
+      showToast("All selected scholars are already paid.", "info");
+      setSelectedIds([]);
+      setBulkPaidConfirm(false);
+      return;
+    }
+
+    const previousState = scholarsToChange.map((s) => ({
+      id: s.id,
+      oldStatus: s.status,
+    }));
+
+    const ok = await bulkUpdateScholars(
+      scholarsToChange.map((s) => s.id),
+      { status: "Paid" },
+      { silent: true },
+    );
+    if (!ok) return;
+
+    let message = `Marked ${scholarsToChange.length} ${
+      scholarsToChange.length === 1 ? "scholar" : "scholars"
+    } as paid.`;
     if (alreadyPaid > 0) {
-      message += ` ${alreadyPaid} ${alreadyPaid === 1 ? 'was' : 'were'} already paid.`
+      message += ` ${alreadyPaid} ${alreadyPaid === 1 ? "was" : "were"} already paid.`;
     }
-    showToast(message, 'success')
-    
-    setSelectedIds([])
-    setBulkPaidConfirm(false)
-  }
 
-  const confirmBulkUnpaid = () => {
-    const affectedScholars = scholars.filter(s => selectedIds.includes(s.id))
-    const scholarsToChange = affectedScholars.filter(s => s.status === 'Paid')
-    const alreadyProcessing = affectedScholars.length - scholarsToChange.length
-    
-    // Save undo information
-    setUndoStack({
-      type: 'payment',
-      changes: scholarsToChange.map(s => ({ id: s.id, oldStatus: s.status }))
-    })
-    
-    // Apply changes
-    scholarsToChange.forEach(s => {
-      bulkUpdateScholars([s.id], { status: 'Processing' })
-    })
-    
-    // Show success message
-    let message = `Marked ${scholarsToChange.length} ${scholarsToChange.length === 1 ? 'scholar' : 'scholars'} as unpaid (Processing).`
+    showToast(message, "success", {
+      duration: 6000,
+      action: {
+        label: "Undo",
+        onClick: () => triggerUndoPayment(previousState),
+      },
+    });
+
+    setSelectedIds([]);
+    setBulkPaidConfirm(false);
+  };
+
+  const confirmBulkUnpaid = async () => {
+    const affectedScholars = scholars.filter((s) => selectedIds.includes(s.id));
+    const scholarsToChange = affectedScholars.filter(
+      (s) => s.status === "Paid",
+    );
+    const alreadyProcessing = affectedScholars.length - scholarsToChange.length;
+
+    if (scholarsToChange.length === 0) {
+      showToast("All selected scholars are already processing.", "info");
+      setSelectedIds([]);
+      setBulkUnpaidConfirm(false);
+      return;
+    }
+
+    const previousState = scholarsToChange.map((s) => ({
+      id: s.id,
+      oldStatus: s.status,
+    }));
+
+    const ok = await bulkUpdateScholars(
+      scholarsToChange.map((s) => s.id),
+      { status: "Processing" },
+      { silent: true },
+    );
+    if (!ok) return;
+
+    let message = `Marked ${scholarsToChange.length} ${
+      scholarsToChange.length === 1 ? "scholar" : "scholars"
+    } as unpaid (Processing).`;
     if (alreadyProcessing > 0) {
-      message += ` ${alreadyProcessing} ${alreadyProcessing === 1 ? 'was' : 'were'} already processing.`
+      message += ` ${alreadyProcessing} ${
+        alreadyProcessing === 1 ? "was" : "were"
+      } already processing.`;
     }
-    showToast(message, 'success')
-    
-    setSelectedIds([])
-    setBulkUnpaidConfirm(false)
-  }
 
-  const confirmBulkGraduated = () => {
-    bulkMarkAsGraduated(selectedIds)
-    setSelectedIds([])
-    setBulkGraduatedConfirm(false)
-  }
+    showToast(message, "success", {
+      duration: 6000,
+      action: {
+        label: "Undo",
+        onClick: () => triggerUndoPayment(previousState),
+      },
+    });
 
-  const handleUndo = () => {
-    if (!undoStack) return
-    
-    if (undoStack.type === 'payment') {
-      undoStack.changes.forEach(change => {
-        bulkUpdateScholars([change.id], { status: change.oldStatus })
-      })
-      showToast('Changes undone', 'success')
+    setSelectedIds([]);
+    setBulkUnpaidConfirm(false);
+  };
+
+  const confirmBulkGraduated = async () => {
+    const ok = await bulkMarkAsGraduated(selectedIds);
+    if (ok) {
+      setSelectedIds([]);
+      setBulkGraduatedConfirm(false);
     }
-    
-    setUndoStack(null)
-  }
+  };
 
-  // Determine which buttons to show
-  const selectedScholars = scholars.filter(s => selectedIds.includes(s.id))
-  const hasProcessing = selectedScholars.some(s => s.status === 'Processing' || !s.status)
-  const hasPaid = selectedScholars.some(s => s.status === 'Paid')
+  const selectedScholars = scholars.filter((s) => selectedIds.includes(s.id));
+  const hasProcessing = selectedScholars.some(
+    (s) => s.status === "Processing" || !s.status,
+  );
+  const hasPaid = selectedScholars.some((s) => s.status === "Paid");
 
-  // Checkbox states
-  const allSelected = filteredScholars.length > 0 && selectedIds.length === filteredScholars.length
-  const someSelected = selectedIds.length > 0 && selectedIds.length < filteredScholars.length
-  const isIndeterminate = someSelected && !allSelected
+  const allSelected =
+    filteredScholars.length > 0 &&
+    selectedIds.length === filteredScholars.length;
+  const someSelected =
+    selectedIds.length > 0 && selectedIds.length < filteredScholars.length;
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
       minimumFractionDigits: 0,
-    }).format(amount)
-  }
+    }).format(amount);
 
   const totalFiltered = filteredScholars.reduce(
     (sum, s) => sum + (parseFloat(s.scholarship_amount || s.amount) || 0),
-    0
-  )
+    0,
+  );
 
-  const handleDelete = (scholar) => {
-    setDeleteConfirm({ isOpen: true, scholar })
-  }
-
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteConfirm.scholar) {
-      deleteScholar(deleteConfirm.scholar.id)
+      await deleteScholar(deleteConfirm.scholar.id);
     }
-  }
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      Processing: 'bg-amber-100 text-amber-700',
-      Paid: 'bg-emerald-100 text-emerald-700',
-    }
-    return badges[status] || 'bg-slate-100 text-slate-700'
-  }
+  };
 
   return (
-    <div className="space-y-5" style={{ maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Bulk Action Bar */}
-      {selectedIds.length > 0 && (
-        <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: '#E6F0FF', border: '1px solid #007AFF' }}>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-5 h-5" style={{ color: '#007AFF' }} strokeWidth={1.5} />
-              <span className="font-semibold" style={{ color: '#1D1D1F' }}>
-                {selectedIds.length} {selectedIds.length === 1 ? 'scholar' : 'scholars'} selected
-              </span>
-            </div>
-            <button
-              onClick={handleClearSelection}
-              className="text-xs font-medium flex items-center gap-1 transition-colors"
-              style={{ color: '#007AFF' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#0051D5'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#007AFF'}
-            >
-              <X className="w-3 h-3" />
-              Clear selection
-            </button>
-          </div>
-          <div className="flex gap-2">
-            {hasProcessing && (
-              <button
-                onClick={handleBulkMarkAsPaid}
-                className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
-                style={{ backgroundColor: '#10b981' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-              >
-                <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
-                Mark as Paid
-              </button>
-            )}
-            {hasPaid && (
-              <button
-                onClick={handleBulkMarkAsUnpaid}
-                className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2"
-                style={{ 
-                  backgroundColor: '#FFFFFF',
-                  color: '#F59E0B',
-                  border: '2px solid #F59E0B'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FEF3C7'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF'
-                }}
-              >
-                <X className="w-4 h-4" strokeWidth={1.5} />
-                Mark as Unpaid
-              </button>
-            )}
-            <button
-              onClick={handleBulkMarkAsGraduated}
-              className="font-semibold px-4 py-2 rounded-lg transition-all shadow flex items-center gap-2 text-white"
-              style={{ backgroundColor: '#007AFF' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
-            >
-              <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
-              Mark as Graduated
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="w-full flex flex-col">
+      {/* Bulk Action Bar - Smooth Expand/Collapse */}
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          selectedIds.length > 0
+            ? "grid-rows-[1fr] opacity-100 translate-y-0 mb-5"
+            : "grid-rows-[0fr] opacity-0 -translate-y-1 pointer-events-none mb-0"
+        }`}
+        aria-hidden={selectedIds.length === 0}
+      >
+        <div className="overflow-hidden">
+          <Card className="gradient-emerald-gold-soft border-brand/45">
+            <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5 text-brand" />
+                  <span className="font-bold text-sm text-foreground">
+                    {selectedIds.length}{" "}
+                    {selectedIds.length === 1 ? "scholar" : "scholars"} selected
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds([])}
+                  className="h-7 px-2 text-xs text-brand"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear selection
+                </Button>
+              </div>
 
-      {/* Undo Bar */}
-      {undoStack && (
-        <div className="rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: '#D1FAE5', border: '1px solid #10b981' }}>
-          <span className="font-semibold" style={{ color: '#1D1D1F' }}>
-            Changes applied
-          </span>
-          <button
-            onClick={handleUndo}
-            className="font-semibold px-4 py-2 rounded-lg transition-all shadow text-white"
-            style={{ backgroundColor: '#10b981' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-          >
-            Undo
-          </button>
-        </div>
-      )}
-
-      {/* Search and Filter Bar */}
-      <div className="bg-white rounded-xl shadow-sm p-4" style={{ border: '1px solid #E5E5EA' }}>
-        <div className="flex flex-col gap-4">
-          {/* Search Input - Full width, flexible */}
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, course, school, or barangay..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F', minWidth: '280px' }}
-            />
-          </div>
-
-          {/* Filter Dropdowns - Grid layout for even spacing */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2.5">
-            <select
-              value={filterBarangay}
-              onChange={(e) => setFilterBarangay(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Barangays</option>
-              {BARANGAYS.map((brgy) => (
-                <option key={brgy} value={brgy}>
-                  {brgy}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterSchool}
-              onChange={(e) => setFilterSchool(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Schools</option>
-              {schools.map((school) => (
-                <option key={school} value={school}>
-                  {school}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Year Levels</option>
-              {YEAR_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterSemester}
-              onChange={(e) => setFilterSemester(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Semesters</option>
-              {SEMESTERS.map((sem) => (
-                <option key={sem} value={sem}>
-                  {sem}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Status</option>
-              <option value="Processing">Processing</option>
-              <option value="Paid">Paid</option>
-            </select>
-
-            <select
-              value={filterPWD}
-              onChange={(e) => setFilterPWD(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All PWD</option>
-              <option value="Yes">PWD: Yes</option>
-              <option value="No">PWD: No</option>
-            </select>
-
-            <select
-              value={filterSoloParent}
-              onChange={(e) => setFilterSoloParent(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Solo Parent</option>
-              <option value="Yes">Solo Parent: Yes</option>
-              <option value="No">Solo Parent: No</option>
-            </select>
-
-            <select
-              value={filterGender}
-              onChange={(e) => setFilterGender(e.target.value)}
-              className="rounded-lg text-xs py-2 px-3 h-9"
-              style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-            >
-              <option value="ALL">All Genders</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
-          </div>
+              <div className="flex flex-wrap gap-2">
+                {hasProcessing && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setBulkPaidConfirm(true)}
+                  >
+                    <CheckSquare className="w-4 h-4" />
+                    Mark as Paid
+                  </Button>
+                )}
+                {hasPaid && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setBulkUnpaidConfirm(true)}
+                  >
+                    <X className="w-4 h-4" />
+                    Mark as Unpaid
+                  </Button>
+                )}
+                <Button
+                  variant="gradient"
+                  size="sm"
+                  onClick={() => setBulkGraduatedConfirm(true)}
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  Mark as Graduated
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Main Scholar Table */}
-      <div className="bg-white rounded-xl shadow-sm" style={{ border: '1px solid #E5E5EA' }}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left" style={{ minWidth: '1250px', borderCollapse: 'separate', borderSpacing: 0 }}>
-            <thead className="font-semibold text-xs uppercase tracking-wider" style={{ backgroundColor: '#F5F5F7', color: '#1D1D1F' }}>
-              <tr>
-                <th 
-                  className="py-3 px-4" 
-                  style={{ 
-                    width: '50px', 
-                    position: 'sticky', 
-                    left: 0, 
-                    backgroundColor: '#F5F5F7', 
-                    zIndex: 20,
-                    borderBottom: '1px solid #E5E5EA',
-                    boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
-                  }}
+      {/* Compact Unified Search, Filter & Action Bar */}
+      <Card className="animate-fade-up mb-4">
+        <CardContent className="p-3">
+          <div className="flex flex-col xl:flex-row xl:items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 w-4 h-4 text-brand/75" />
+              <Input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search name, school, course, or barangay..."
+                className="pl-9 pr-8 h-9 text-xs sm:text-sm"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <button
-                    onClick={handleSelectAll}
-                    className="flex items-center justify-center w-full"
-                    title={allSelected ? "Deselect all" : "Select all"}
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Inline Quick Filters + Secondary Filters Popover + Add Scholar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-[168px]">
+                <Select
+                  value={filterBarangay}
+                  onValueChange={setFilterBarangay}
+                >
+                  <SelectTrigger
+                    aria-label="Filter by Barangay"
+                    className="h-9 text-xs"
                   >
-                    {isIndeterminate ? (
-                      <MinusSquare className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
-                    ) : allSelected ? (
-                      <CheckSquare className="w-4 h-4" style={{ color: '#007AFF' }} strokeWidth={1.5} />
-                    ) : (
-                      <Square className="w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
+                    <SelectValue placeholder="All Barangays" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Barangays</SelectItem>
+                    {BARANGAYS.map((brgy) => (
+                      <SelectItem key={brgy} value={brgy}>
+                        {brgy}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[196px]">
+                <Select value={filterSchool} onValueChange={setFilterSchool}>
+                  <SelectTrigger
+                    aria-label="Filter by School"
+                    className="h-9 text-xs"
+                  >
+                    <SelectValue placeholder="All Schools" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Schools</SelectItem>
+                    {schools.map((school) => (
+                      <SelectItem key={school} value={school}>
+                        {school}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[148px]">
+                <Select value={filterYear} onValueChange={setFilterYear}>
+                  <SelectTrigger
+                    aria-label="Filter by Year Level"
+                    className="h-9 text-xs"
+                  >
+                    <SelectValue placeholder="All Year Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Year Levels</SelectItem>
+                    {YEAR_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[132px]">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger
+                    aria-label="Filter by Payment Status"
+                    className="h-9 text-xs"
+                  >
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Status</SelectItem>
+                    <SelectItem value="Processing">Processing</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Extra Filters Popover (Semester, Gender, PWD, Solo Parent) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-9 px-3 rounded-lg text-xs gap-1.5 ${
+                      secondaryFilterCount > 0
+                        ? "border-brand/50 bg-brand/10 text-brand font-semibold"
+                        : ""
+                    }`}
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-brand" />
+                    <span>Filters</span>
+                    {secondaryFilterCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-brand text-white">
+                        {secondaryFilterCount}
+                      </span>
                     )}
-                  </button>
-                </th>
-                <th 
-                  className="py-3 px-4" 
-                  style={{ 
-                    minWidth: '280px', 
-                    width: '280px',
-                    position: 'sticky', 
-                    left: '50px', 
-                    backgroundColor: '#F5F5F7', 
-                    zIndex: 20,
-                    borderBottom: '1px solid #E5E5EA',
-                    boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
-                  }}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-foreground/85">
+                      More Filters
+                    </span>
+                    {secondaryFilterCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleResetSecondaryFilters}
+                        className="text-[11px] font-semibold text-brand hover:underline"
+                      >
+                        Clear ({secondaryFilterCount})
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Semester
+                      </span>
+                      <Select
+                        value={filterSemester}
+                        onValueChange={setFilterSemester}
+                      >
+                        <SelectTrigger
+                          aria-label="Filter by Semester"
+                          className="h-8 text-xs"
+                        >
+                          <SelectValue placeholder="All Semesters" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All Semesters</SelectItem>
+                          {SEMESTERS.map((sem) => (
+                            <SelectItem key={sem} value={sem}>
+                              {sem}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Gender
+                      </span>
+                      <Select
+                        value={filterGender}
+                        onValueChange={setFilterGender}
+                      >
+                        <SelectTrigger
+                          aria-label="Filter by Gender"
+                          className="h-8 text-xs"
+                        >
+                          <SelectValue placeholder="All Genders" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All Genders</SelectItem>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        PWD
+                      </span>
+                      <Select value={filterPWD} onValueChange={setFilterPWD}>
+                        <SelectTrigger
+                          aria-label="Filter by PWD"
+                          className="h-8 text-xs"
+                        >
+                          <SelectValue placeholder="All PWD" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All PWD</SelectItem>
+                          <SelectItem value="Yes">PWD: Yes</SelectItem>
+                          <SelectItem value="No">PWD: No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Solo Parent
+                      </span>
+                      <Select
+                        value={filterSoloParent}
+                        onValueChange={setFilterSoloParent}
+                      >
+                        <SelectTrigger
+                          aria-label="Filter by Solo Parent"
+                          className="h-8 text-xs"
+                        >
+                          <SelectValue placeholder="All Solo Parent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All Solo Parent</SelectItem>
+                          <SelectItem value="Yes">Solo Parent: Yes</SelectItem>
+                          <SelectItem value="No">Solo Parent: No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleResetFilters}
+                  className="h-9 px-2.5 rounded-lg text-xs text-muted-foreground hover:text-foreground"
                 >
-                  Scholar Name
-                </th>
-                <th className="py-3 px-4" style={{ minWidth: '130px', borderBottom: '1px solid #E5E5EA' }}>Barangay</th>
-                <th className="py-3 px-4" style={{ minWidth: '260px', borderBottom: '1px solid #E5E5EA' }}>School</th>
-                <th className="py-3 px-4 text-center" style={{ minWidth: '100px', borderBottom: '1px solid #E5E5EA' }}>Latest GWA</th>
-                <th className="py-3 px-4" style={{ minWidth: '100px', borderBottom: '1px solid #E5E5EA' }}>Year Level</th>
-                <th className="py-3 px-4" style={{ minWidth: '90px', borderBottom: '1px solid #E5E5EA' }}>Semester</th>
-                <th className="py-3 px-4" style={{ minWidth: '200px', borderBottom: '1px solid #E5E5EA' }}>Course / Program</th>
-                <th className="py-3 px-4 text-right" style={{ minWidth: '110px', borderBottom: '1px solid #E5E5EA' }}>Amount</th>
-                <th className="py-3 px-4 text-center" style={{ minWidth: '110px', borderBottom: '1px solid #E5E5EA' }}>Status</th>
-                <th 
-                  className="py-3 px-4 text-center no-print" 
-                  style={{ 
-                    width: '100px', 
-                    position: 'sticky', 
-                    right: 0, 
-                    backgroundColor: '#F5F5F7', 
-                    zIndex: 20,
-                    borderBottom: '1px solid #E5E5EA',
-                    boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1)',
-                  }}
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset ({activeFilterCount})</span>
+                </Button>
+              )}
+
+              {onAddScholar && (
+                <>
+                  <div className="hidden xl:block h-5 w-px bg-border mx-0.5" />
+                  <Button
+                    type="button"
+                    variant="gradient"
+                    onClick={onAddScholar}
+                    className="h-9 px-4 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap ml-auto xl:ml-0"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={2.25} />
+                    <span>Add Scholar</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Scholars Table */}
+      <Card
+        className="overflow-hidden animate-fade-up"
+        style={{ animationDelay: "70ms" }}
+      >
+        <Table
+          wrapperClassName={
+            selectedIds.length > 0
+              ? "max-h-[calc(100vh-25rem)] min-h-[280px]"
+              : "max-h-[calc(100vh-19.5rem)] min-h-[320px]"
+          }
+          style={{ minWidth: "1250px" }}
+        >
+          <TableHeader className="sticky top-0 z-20 bg-[#F6F6F1] shadow-[0_1px_0_0_hsl(var(--border))]">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[52px] sticky left-0 z-30 bg-[#F6F6F1]">
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={
+                      someSelected
+                        ? "indeterminate"
+                        : allSelected
+                          ? true
+                          : false
+                    }
+                    onCheckedChange={handleSelectAll}
+                    aria-label={allSelected ? "Deselect all" : "Select all"}
+                  />
+                </div>
+              </TableHead>
+              <TableHead
+                className="w-[270px] min-w-[260px] sticky left-[52px] z-30 bg-[#F6F6F1]"
+                style={{ boxShadow: "2px 0 4px -2px rgba(88, 117, 41, 0.1)" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleSort("name")}
+                  className="inline-flex items-center gap-1.5 hover:text-brand transition-colors"
                 >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {filteredScholars.length === 0 ? (
-                <tr>
-                  <td colSpan="11" className="py-12 text-center text-slate-500">
-                    {allScholars.length === 0 ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <UserPlus className="w-12 h-12 text-slate-300" />
-                        <p className="font-medium">No scholars yet</p>
-                        <p className="text-xs">Click "Add Scholar" to get started</p>
+                  <span>Scholar Name</span>
+                  {renderSortIcon("name")}
+                </button>
+              </TableHead>
+              <TableHead className="min-w-[130px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("barangay")}
+                  className="inline-flex items-center gap-1.5 hover:text-brand transition-colors"
+                >
+                  <span>Barangay</span>
+                  {renderSortIcon("barangay")}
+                </button>
+              </TableHead>
+              <TableHead className="min-w-[240px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("school")}
+                  className="inline-flex items-center gap-1.5 hover:text-brand transition-colors"
+                >
+                  <span>School</span>
+                  {renderSortIcon("school")}
+                </button>
+              </TableHead>
+              <TableHead className="text-center min-w-[110px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("gwa")}
+                  className="inline-flex items-center justify-center gap-1.5 hover:text-brand transition-colors"
+                >
+                  <span>Latest GWA</span>
+                  {renderSortIcon("gwa")}
+                </button>
+              </TableHead>
+              <TableHead className="min-w-[110px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("yearLevel")}
+                  className="inline-flex items-center gap-1.5 hover:text-brand transition-colors"
+                >
+                  <span>Year Level</span>
+                  {renderSortIcon("yearLevel")}
+                </button>
+              </TableHead>
+              <TableHead className="min-w-[100px]">Semester</TableHead>
+              <TableHead className="min-w-[200px]">Course / Program</TableHead>
+              <TableHead className="text-right min-w-[115px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("amount")}
+                  className="inline-flex items-center justify-end gap-1.5 hover:text-brand transition-colors ml-auto"
+                >
+                  <span>Amount</span>
+                  {renderSortIcon("amount")}
+                </button>
+              </TableHead>
+              <TableHead className="text-center min-w-[115px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("status")}
+                  className="inline-flex items-center justify-center gap-1.5 hover:text-brand transition-colors"
+                >
+                  <span>Status</span>
+                  {renderSortIcon("status")}
+                </button>
+              </TableHead>
+              <TableHead
+                className="w-[104px] text-center sticky right-0 z-30 bg-[#F6F6F1] no-print"
+                style={{
+                  boxShadow: "-2px 0 4px -2px rgba(88, 117, 41, 0.1)",
+                }}
+              >
+                Actions
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {paginatedScholars.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={11} className="py-14 text-center">
+                  {allScholars.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <UserPlus className="w-12 h-12 opacity-40" />
+                      <p className="font-semibold text-foreground">
+                        No scholars yet
+                      </p>
+                      <p className="text-xs">
+                        Click &ldquo;Add Scholar&rdquo; to get started
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No scholars match your current filters
+                    </p>
+                  )}
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedScholars.map((scholar) => {
+                const isSelected = selectedIds.includes(scholar.id);
+                const latestGWA = getLatestGWA(scholar);
+                const isWarning = latestGWA ? isGWAWarning(latestGWA) : false;
+
+                return (
+                  <TableRow
+                    key={scholar.id}
+                    data-state={isSelected ? "selected" : undefined}
+                    onClick={() => {
+                      if (window.getSelection()?.toString()) return;
+                      onEditScholar(scholar);
+                    }}
+                    className="group cursor-pointer"
+                  >
+                    <TableCell
+                      onClick={(e) => e.stopPropagation()}
+                      className="sticky left-0 z-10 bg-[inherit] transition-shadow duration-300 ease-out group-data-[state=selected]:shadow-[inset_3px_0_0_#587529]"
+                    >
+                      <div className="flex items-center justify-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleSelectOne(scholar.id)}
+                          aria-label={`Select ${formatScholarName(
+                            scholar,
+                            "firstLast",
+                          )}`}
+                        />
                       </div>
-                    ) : (
-                      <p>No scholars match your filters</p>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                filteredScholars.map((scholar) => {
-                  const isSelected = selectedIds.includes(scholar.id)
-                  const rowBgColor = isSelected ? '#E6F0FF' : '#FFFFFF'
-                  const hoverBgColor = isSelected ? '#D6E7FF' : '#F5F5F7'
-                  
-                  return (
-                    <tr 
-                      key={scholar.id} 
-                      className="transition-colors"
-                      style={{ 
-                        backgroundColor: rowBgColor,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = hoverBgColor
-                        // Update sticky cells background
-                        const cells = e.currentTarget.querySelectorAll('td[data-sticky]')
-                        cells.forEach(cell => {
-                          cell.style.backgroundColor = hoverBgColor
-                        })
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = rowBgColor
-                        // Update sticky cells background
-                        const cells = e.currentTarget.querySelectorAll('td[data-sticky]')
-                        cells.forEach(cell => {
-                          cell.style.backgroundColor = rowBgColor
-                        })
+                    </TableCell>
+
+                    <TableCell
+                      className="sticky left-[52px] z-10 bg-[inherit] font-semibold text-foreground"
+                      style={{
+                        boxShadow: "2px 0 4px -2px rgba(88, 117, 41, 0.1)",
                       }}
                     >
-                      <td 
-                        data-sticky="true"
-                        className="py-3 px-4" 
-                        style={{ 
-                          position: 'sticky', 
-                          left: 0, 
-                          backgroundColor: rowBgColor,
-                          zIndex: 10,
-                          borderBottom: '1px solid #E5E5EA',
-                          boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
-                        }}
-                      >
-                        <button
-                          onClick={() => handleSelectOne(scholar.id)}
-                          className="flex items-center justify-center w-full"
-                        >
-                          {selectedIds.includes(scholar.id) ? (
-                            <CheckSquare className="w-4 h-4" style={{ color: '#007AFF' }} strokeWidth={1.5} />
-                          ) : (
-                            <Square className="w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
-                          )}
-                        </button>
-                      </td>
-                      <td 
-                        data-sticky="true"
-                        className="py-3 px-4" 
-                        style={{ 
-                          position: 'sticky', 
-                          left: '50px', 
-                          backgroundColor: rowBgColor,
-                          zIndex: 10,
-                          borderBottom: '1px solid #E5E5EA',
-                          boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
-                          minWidth: '280px',
-                          width: '280px',
-                        }}
-                      >
-                        <div className="font-semibold leading-snug" style={{ color: '#1D1D1F', wordWrap: 'break-word' }}>
-                          {formatScholarName(scholar, 'full')}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4" style={{ color: '#AAAAAA', borderBottom: '1px solid #E5E5EA' }}>
-                        <div className="whitespace-nowrap overflow-hidden text-ellipsis">{scholar.barangay}</div>
-                      </td>
-                      <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA', borderBottom: '1px solid #E5E5EA' }} title={scholar.school}>
-                        <div className="line-clamp-2 overflow-hidden">{scholar.school}</div>
-                      </td>
-                      <td className="py-3 px-4 text-center" style={{ borderBottom: '1px solid #E5E5EA' }}>
-                        {(() => {
-                          const latestGWA = getLatestGWA(scholar)
-                          if (!latestGWA) {
-                            return <span className="text-xs whitespace-nowrap" style={{ color: '#AAAAAA' }}>No grades</span>
-                          }
-                          const isWarning = isGWAWarning(latestGWA)
-                          return (
-                            <span 
-                              className={`text-sm font-bold whitespace-nowrap ${isWarning ? 'text-red-600' : ''}`}
-                              style={!isWarning ? { color: '#10b981' } : {}}
-                            >
-                              {formatGWA(latestGWA)}
-                            </span>
-                          )
-                        })()}
-                      </td>
-                      <td className="py-3 px-4" style={{ color: '#AAAAAA', borderBottom: '1px solid #E5E5EA' }}>
-                        <div className="whitespace-nowrap overflow-hidden text-ellipsis">{scholar.yearLevel}</div>
-                      </td>
-                      <td className="py-3 px-4" style={{ borderBottom: '1px solid #E5E5EA' }}>
-                        <span className="text-xs font-medium whitespace-nowrap" style={{ color: '#AAAAAA' }}>{scholar.semester || '1st Sem'}</span>
-                      </td>
-                      <td className="py-3 px-4 text-xs" style={{ color: '#AAAAAA', borderBottom: '1px solid #E5E5EA' }} title={scholar.course}>
-                        <div className="line-clamp-2 overflow-hidden">{scholar.course || '-'}</div>
-                      </td>
-                      <td className="py-3 px-4 text-right font-semibold" style={{ color: '#10b981', borderBottom: '1px solid #E5E5EA' }}>
-                        <div className="whitespace-nowrap">
-                          {formatCurrency(scholar.scholarship_amount || scholar.amount || 0)}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-center" style={{ borderBottom: '1px solid #E5E5EA' }}>
-                        <span
-                          className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${getStatusBadge(
-                            scholar.status
-                          )}`}
-                        >
-                          {scholar.status}
+                      <div className="leading-snug">
+                        {formatScholarName(scholar, "full")}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {scholar.barangay}
+                    </TableCell>
+
+                    <TableCell
+                      className="text-xs text-muted-foreground"
+                      title={scholar.school}
+                    >
+                      <div className="line-clamp-2">{scholar.school}</div>
+                    </TableCell>
+
+                    <TableCell className="text-center">
+                      {!latestGWA ? (
+                        <span className="text-xs text-muted-foreground/75 whitespace-nowrap">
+                          No grades
                         </span>
-                      </td>
-                      <td 
-                        data-sticky="true"
-                        className="py-3 px-4 text-center no-print" 
-                        style={{ 
-                          position: 'sticky', 
-                          right: 0, 
-                          backgroundColor: rowBgColor,
-                          zIndex: 10,
-                          borderBottom: '1px solid #E5E5EA',
-                          boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1)',
-                        }}
+                      ) : (
+                        <span
+                          className={`text-sm font-bold whitespace-nowrap ${
+                            isWarning ? "text-red-600" : "text-brand"
+                          }`}
+                        >
+                          {formatGWA(latestGWA)}
+                        </span>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="whitespace-nowrap text-foreground/80">
+                      {scholar.yearLevel}
+                    </TableCell>
+
+                    <TableCell className="whitespace-nowrap text-xs font-medium text-muted-foreground">
+                      {scholar.semester || "1st Sem"}
+                    </TableCell>
+
+                    <TableCell
+                      className="text-xs text-muted-foreground"
+                      title={scholar.course}
+                    >
+                      <div className="line-clamp-2">
+                        {scholar.course || "-"}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-right font-bold text-brand whitespace-nowrap">
+                      {formatCurrency(
+                        scholar.scholarship_amount || scholar.amount || 0,
+                      )}
+                    </TableCell>
+
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={
+                          scholar.status === "Paid" ? "success" : "warning"
+                        }
+                        className="whitespace-nowrap"
                       >
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => onEditScholar(scholar)}
-                            className="p-1 transition-colors"
-                            style={{ color: '#007AFF' }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = '#0051D5'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = '#007AFF'}
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" strokeWidth={1.5} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(scholar)}
-                            className="p-1 transition-colors"
-                            style={{ color: '#FF3B30' }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = '#C62828'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = '#FF3B30'}
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        {scholar.status || "Processing"}
+                      </Badge>
+                    </TableCell>
 
-        {/* Table Footer Stats */}
-        <div className="px-4 py-3 flex flex-col sm:flex-row items-center justify-between text-xs gap-2" style={{ backgroundColor: '#F5F5F7', borderTop: '1px solid #E5E5EA' }}>
-          <div style={{ color: '#AAAAAA' }}>
-            Showing{' '}
-            <span className="font-bold" style={{ color: '#1D1D1F' }}>{filteredScholars.length}</span> out of{' '}
-            <span className="font-bold" style={{ color: '#1D1D1F' }}>{allScholars.length}</span> records
-          </div>
-          <div className="font-semibold" style={{ color: '#1D1D1F' }}>
-            Filtered Total Amount:{' '}
-            <span className="font-bold text-sm" style={{ color: '#10b981' }}>
-              {formatCurrency(totalFiltered)}
-            </span>
-          </div>
-        </div>
-      </div>
+                    <TableCell
+                      onClick={(e) => e.stopPropagation()}
+                      className="sticky right-0 z-10 bg-[inherit] no-print"
+                      style={{
+                        boxShadow: "-2px 0 4px -2px rgba(88, 117, 41, 0.1)",
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-brand hover:text-foreground"
+                              onClick={() => onEditScholar(scholar)}
+                              aria-label="Edit scholar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit scholar</TooltipContent>
+                        </Tooltip>
 
-      {/* Delete Confirmation Modal */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() =>
+                                setDeleteConfirm({ isOpen: true, scholar })
+                              }
+                              aria-label="Delete scholar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete scholar</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+
+        {/* Footer Summary + Shadcn Pagination + Page Size Select */}
+        <div className="px-4 py-3.5 bg-gradient-to-r from-muted/90 via-accent/60 to-muted/90 border-t border-border space-y-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between text-xs gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-muted-foreground">
+                Filtered:{" "}
+                <strong className="text-foreground">
+                  {filteredScholars.length}
+                </strong>{" "}
+                of{" "}
+                <strong className="text-foreground">
+                  {allScholars.length}
+                </strong>{" "}
+                records
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Rows/page:</span>
+                <div className="w-[82px]">
+                  <Select
+                    value={String(itemsPerPage)}
+                    onValueChange={(val) => setItemsPerPage(Number(val))}
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="font-semibold text-foreground">
+              Filtered Total Amount:{" "}
+              <span className="font-black text-sm text-brand">
+                {formatCurrency(totalFiltered)}
+              </span>
+            </div>
+          </div>
+
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={sortedScholars.length}
+            itemsPerPage={itemsPerPage}
+          />
+        </div>
+      </Card>
+
+      {/* Modals */}
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}
         onClose={() => setDeleteConfirm({ isOpen: false, scholar: null })}
         onConfirm={confirmDelete}
         title="Delete Scholar?"
-        scholarName={deleteConfirm.scholar ? formatScholarName(deleteConfirm.scholar, 'firstLast') : ''}
+        scholarName={
+          deleteConfirm.scholar
+            ? formatScholarName(deleteConfirm.scholar, "firstLast")
+            : ""
+        }
         message="Are you sure you want to delete this scholar record?"
         confirmText="Delete"
         cancelText="Cancel"
         type="danger"
       />
 
-      {/* Bulk Paid Confirmation Modal */}
       <ConfirmModal
         isOpen={bulkPaidConfirm}
         onClose={() => setBulkPaidConfirm(false)}
         onConfirm={confirmBulkPaid}
         title="Mark as Paid?"
-        message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Paid?`}
+        message={`Are you sure you want to mark ${selectedIds.length} ${
+          selectedIds.length === 1 ? "scholar" : "scholars"
+        } as Paid?`}
         confirmText="Mark as Paid"
         cancelText="Cancel"
         type="success"
       />
 
-      {/* Bulk Unpaid Confirmation Modal */}
       <ConfirmModal
         isOpen={bulkUnpaidConfirm}
         onClose={() => setBulkUnpaidConfirm(false)}
         onConfirm={confirmBulkUnpaid}
         title="Mark as Unpaid?"
-        message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Unpaid (Processing)?`}
+        message={`Are you sure you want to mark ${selectedIds.length} ${
+          selectedIds.length === 1 ? "scholar" : "scholars"
+        } as Unpaid (Processing)?`}
         confirmText="Mark as Unpaid"
         cancelText="Cancel"
         type="warning"
       />
 
-      {/* Bulk Graduated Confirmation Modal */}
       <ConfirmModal
         isOpen={bulkGraduatedConfirm}
         onClose={() => setBulkGraduatedConfirm(false)}
         onConfirm={confirmBulkGraduated}
         title="Mark as Graduated?"
-        message={`Are you sure you want to mark ${selectedIds.length} ${selectedIds.length === 1 ? 'scholar' : 'scholars'} as Graduated?`}
+        message={`Are you sure you want to mark ${selectedIds.length} ${
+          selectedIds.length === 1 ? "scholar" : "scholars"
+        } as Graduated?`}
         confirmText="Mark as Graduated"
         cancelText="Cancel"
         type="success"
       />
     </div>
-  )
-}
+  );
+};
 
-export default ScholarRecords
+export default ScholarRecords;

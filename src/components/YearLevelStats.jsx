@@ -1,105 +1,150 @@
 import { TrendingUp, Users } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { YEAR_LEVELS } from '../config/yearLevels'
-import { YEAR_LEVEL_COLORS, formatCurrency } from '../utils/helpers'
+import { formatCurrency } from '../utils/helpers'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+
+const LEVEL_GRADIENTS = {
+  '1st Year': 'from-[#587529] to-[#71951E]',
+  '2nd Year': 'from-[#71951E] to-[#9fb634]',
+  '3rd Year': 'from-[#71951E] to-[#F4BE38]',
+  '4th Year': 'from-[#F4BE38] to-[#EDDA5E]',
+  '5th Year': 'from-[#587529] to-[#F4BE38]',
+  '6th Year': 'from-[#587529] to-[#EDDA5E]',
+}
 
 const YearLevelStats = () => {
-  const { getYearLevelStats, getTotalScholars, getTotalAmount } = useScholarStore()
+  const { getYearLevelStats, getTotalScholars, getTotalAmount } =
+    useScholarStore()
 
   const yearLevelStats = getYearLevelStats(YEAR_LEVELS)
   const totalScholars = getTotalScholars()
   const totalAmount = getTotalAmount()
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
+      <div className="animate-fade-up">
+        <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+          Year Level Statistics
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Distribution of beneficiary headcount and allocations across college year levels.
+        </p>
+      </div>
+
       {/* Year Level Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {YEAR_LEVELS.map((level) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {YEAR_LEVELS.map((level, idx) => {
           const stats = yearLevelStats[level]
-          const percentage = totalScholars > 0 ? (stats.count / totalScholars) * 100 : 0
-          const colorConfig = YEAR_LEVEL_COLORS[level] || YEAR_LEVEL_COLORS['1st Year']
+          const percentage =
+            totalScholars > 0 ? (stats.count / totalScholars) * 100 : 0
+          const gradient =
+            LEVEL_GRADIENTS[level] || 'from-[#587529] to-[#F4BE38]'
 
           return (
-            <div
+            <Card
               key={level}
-              className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition"
-              style={{ border: '1px solid #E5E5EA' }}
+              className="glass-card-hover animate-fade-up"
+              style={{ animationDelay: `${idx * 45}ms` }}
             >
-              <div className="flex items-center justify-between mb-2">
-                <TrendingUp className={`w-5 h-5 ${colorConfig.text}`} strokeWidth={1.5} />
-                <span className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>{stats.count}</span>
-              </div>
-              <h3 className="text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>{level}</h3>
-              <p className="text-xs font-medium" style={{ color: '#10b981' }}>
-                {formatCurrency(stats.amount)}
-              </p>
-              <div className="mt-2 w-full rounded-full h-1.5" style={{ backgroundColor: '#E5E5EA' }}>
-                <div
-                  className={`${colorConfig.bg} h-full rounded-full transition-all`}
-                  style={{ width: `${percentage}%` }}
-                ></div>
-              </div>
-            </div>
+              <CardContent className="p-5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#587529]/15 to-[#F4BE38]/30 border border-brand/25 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-brand" />
+                  </div>
+                  <span className="text-2xl font-black text-foreground">
+                    {stats.count}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">{level}</h3>
+                  <p className="text-xs font-semibold text-brand">
+                    {formatCurrency(stats.amount)}
+                  </p>
+                </div>
+                <Progress
+                  value={percentage}
+                  indicatorClassName={`bg-gradient-to-r ${gradient}`}
+                  className="h-2"
+                />
+                <p className="text-[11px] font-medium text-muted-foreground text-right">
+                  {percentage.toFixed(1)}% of total
+                </p>
+              </CardContent>
+            </Card>
           )
         })}
       </div>
 
-      {/* Detailed Analytics */}
-      <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E5EA' }}>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1D1D1F' }}>
-          Comparative Year Level Analytics
-        </h3>
-        <p className="text-xs mb-6" style={{ color: '#AAAAAA' }}>
-          Percentage and scholar counts grouped by academic level.
-        </p>
+      {/* Comparative Analytics */}
+      <Card className="animate-fade-up" style={{ animationDelay: '220ms' }}>
+        <CardContent className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-foreground">
+                Comparative Year Level Analytics
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Percentage and scholar counts grouped by academic level
+              </p>
+            </div>
+            <Badge variant="gold">6 Levels</Badge>
+          </div>
 
-        <div className="space-y-6">
-          {YEAR_LEVELS.map((level) => {
-            const stats = yearLevelStats[level]
-            const percentage = totalScholars > 0 ? (stats.count / totalScholars) * 100 : 0
-            const amountPercentage = totalAmount > 0 ? (stats.amount / totalAmount) * 100 : 0
-            const colorConfig = YEAR_LEVEL_COLORS[level] || YEAR_LEVEL_COLORS['1st Year']
+          <div className="space-y-5">
+            {YEAR_LEVELS.map((level) => {
+              const stats = yearLevelStats[level]
+              const percentage =
+                totalScholars > 0 ? (stats.count / totalScholars) * 100 : 0
+              const amountPercentage =
+                totalAmount > 0 ? (stats.amount / totalAmount) * 100 : 0
+              const gradient =
+                LEVEL_GRADIENTS[level] || 'from-[#587529] to-[#F4BE38]'
 
-            return (
-              <div key={level} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-3 h-3 rounded-full ${colorConfig.bg}`}
-                    ></div>
-                    <span className="font-semibold" style={{ color: '#1D1D1F' }}>{level}</span>
-                  </div>
-                  <div className="flex items-center gap-6 text-xs">
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
-                      <span className="font-bold" style={{ color: '#1D1D1F' }}>{stats.count}</span>
-                      <span style={{ color: '#AAAAAA' }}>({percentage.toFixed(1)}%)</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="font-bold" style={{ color: '#10b981' }}>
-                        {formatCurrency(stats.amount)}
+              return (
+                <div key={level} className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={`w-3 h-3 rounded-full bg-gradient-to-r ${gradient}`}
+                      />
+                      <span className="font-bold text-sm text-foreground">
+                        {level}
                       </span>
-                      <span style={{ color: '#AAAAAA' }}>({amountPercentage.toFixed(1)}%)</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="w-full rounded-full h-3 overflow-hidden" style={{ backgroundColor: '#E5E5EA' }}>
-                  <div
-                    className={`${colorConfig.bg} h-full rounded-full transition-all flex items-center justify-end pr-2`}
-                    style={{ width: `${percentage}%` }}
-                  >
-                    {percentage > 15 && (
-                      <span className="text-[10px] font-bold text-white">
-                        {percentage.toFixed(0)}%
+                    </div>
+                    <div className="flex items-center gap-5 text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                        <strong className="text-foreground">
+                          {stats.count}
+                        </strong>
+                        <span className="text-muted-foreground">
+                          ({percentage.toFixed(1)}%)
+                        </span>
                       </span>
-                    )}
+                      <span className="flex items-center gap-1.5">
+                        <strong className="text-brand">
+                          {formatCurrency(stats.amount)}
+                        </strong>
+                        <span className="text-muted-foreground">
+                          ({amountPercentage.toFixed(1)}%)
+                        </span>
+                      </span>
+                    </div>
                   </div>
+                  <Progress
+                    value={percentage}
+                    indicatorClassName={`bg-gradient-to-r ${gradient}`}
+                    className="h-3"
+                  />
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -1,20 +1,91 @@
-import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { X, Plus } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import {
+  Plus,
+  Trash2,
+  GraduationCap,
+  UserPlus,
+  User,
+  School,
+  Phone,
+  BookOpen,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
+  ArrowLeft,
+  X,
+  AlertCircle,
+  Wallet,
+} from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { BARANGAYS } from '../config/barangays'
 import SEMESTER_OPTIONS, { getSemesterGradeLabel } from '../config/semesters'
-
-// Extract semester values for the dropdown
-const SEMESTERS = SEMESTER_OPTIONS.map(opt => opt.value)
 import { SUFFIXES } from '../config/suffixes'
 import { YEAR_LEVELS } from '../config/yearLevels'
-import { GRADING_CONFIG, validateGWA, formatGWA, isGWAWarning } from '../config/grading'
+import {
+  GRADING_CONFIG,
+  validateGWA,
+  formatGWA,
+  isGWAWarning,
+} from '../config/grading'
 import GraduateConfirmModal from './GraduateConfirmModal'
 import SchoolAutocomplete from './SchoolAutocomplete'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const SEMESTERS = SEMESTER_OPTIONS.map((opt) => opt.value)
+const QUICK_AMOUNTS = [10000, 15000, 20000, 25000]
+const QUICK_SCHOOL_YEARS = ['2026-2027', '2025-2026', '2024-2025', '2027-2028']
+
+const formatNumberWithCommas = (value) => {
+  if (!value && value !== 0) return ''
+  const num = parseFloat(value)
+  if (isNaN(num)) return ''
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
+}
+
+const parseFormattedNumber = (value) => String(value).replace(/,/g, '')
+
+const SegmentedOption = ({ active, onClick, children, className = '' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`flex-1 h-9 px-3 rounded-lg border text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+      active
+        ? 'border-brand bg-brand/10 text-brand shadow-[0_1px_2px_rgba(88,117,41,0.12)]'
+        : 'border-border bg-white text-muted-foreground hover:text-foreground hover:bg-[#F7F8F3]'
+    } ${className}`}
+  >
+    {children}
+  </button>
+)
 
 const ScholarModal = ({ scholar, onClose }) => {
-  const { addScholar, updateScholar, getAllSchoolsList, bulkMarkAsGraduated } = useScholarStore()
+  const {
+    addScholar,
+    updateScholar,
+    getAllSchoolsList,
+    bulkMarkAsGraduated,
+    showToast,
+  } = useScholarStore()
   const isEditing = !!scholar
 
   const [formData, setFormData] = useState({
@@ -41,30 +112,89 @@ const ScholarModal = ({ scholar, onClose }) => {
     ...scholar,
   })
 
+  const [activeStep, setActiveStep] = useState(1)
+  const [stepDirection, setStepDirection] = useState('initial')
   const [showGraduateModal, setShowGraduateModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [scholarshipAmountDisplay, setScholarshipAmountDisplay] = useState('')
   const [scholarshipAmountError, setScholarshipAmountError] = useState('')
+  const [useSchoolSelectOnly, setUseSchoolSelectOnly] = useState(false)
 
-  // Get existing schools from the system
   const existingSchools = getAllSchoolsList()
 
-  // Grade entry state - semester will be synced from formData.semester
   const [newGrade, setNewGrade] = useState({
-    schoolYear: '',
-    gwa: ''
+    schoolYear: '2026-2027',
+    gwa: '',
   })
   const [gradeError, setGradeError] = useState('')
   const [gradesError, setGradesError] = useState('')
 
+  useEffect(() => {
+    if (scholar?.scholarship_amount) {
+      setScholarshipAmountDisplay(
+        formatNumberWithCommas(scholar.scholarship_amount)
+      )
+    }
+  }, [scholar])
+
+  const step1Complete = useMemo(() => {
+    const amountNum = parseFloat(formData.scholarship_amount)
+    return (
+      Boolean(formData.firstName?.trim()) &&
+      Boolean(formData.lastName?.trim()) &&
+      Boolean(formData.gender) &&
+      Boolean(formData.barangay) &&
+      Boolean(formData.school?.trim()) &&
+      !isNaN(amountNum) &&
+      amountNum > 0
+    )
+  }, [formData])
+
+  const step2Unlocked = isEditing || step1Complete
+
+  const goToStep = (targetStep) => {
+    if (targetStep === activeStep) return
+    if (targetStep === 2 && !validateStep1()) return
+    setStepDirection(targetStep > activeStep ? 'forward' : 'backward')
+    setActiveStep(targetStep)
+  }
+
+  const validateStep1 = () => {
+    if (!formData.firstName?.trim() || !formData.lastName?.trim()) {
+      showToast('Please enter the scholar first and last name', 'error')
+      return false
+    }
+    if (!formData.gender) {
+      showToast('Please select gender', 'error')
+      return false
+    }
+    if (!formData.school?.trim()) {
+      showToast('Please select or enter a school', 'error')
+      return false
+    }
+    if (
+      !formData.scholarship_amount ||
+      formData.scholarship_amount === '' ||
+      parseFloat(formData.scholarship_amount) <= 0
+    ) {
+      setScholarshipAmountError(
+        'Scholarship amount is required and must be greater than 0'
+      )
+      showToast('Please enter a valid scholarship amount', 'error')
+      return false
+    }
+    setScholarshipAmountError('')
+    return true
+  }
+
   const handleAddGrade = () => {
-    // Check if semester is selected in academic info
     if (!formData.semester) {
-      setGradeError('Please select semester in Academic Information section first')
+      setGradeError('Please select semester in Academic Placement first')
       return
     }
 
-    if (!newGrade.schoolYear || !newGrade.gwa) {
-      setGradeError('Please fill in all grade fields')
+    if (!newGrade.schoolYear?.trim() || !newGrade.gwa) {
+      setGradeError('Please fill in School Year and GWA')
       return
     }
 
@@ -75,87 +205,47 @@ const ScholarModal = ({ scholar, onClose }) => {
     }
 
     const gradeEntry = {
-      schoolYear: newGrade.schoolYear,
-      semester: getSemesterGradeLabel(formData.semester), // Use grade label from academic semester
+      schoolYear: newGrade.schoolYear.trim(),
+      semester: getSemesterGradeLabel(formData.semester),
       gwa: parseFloat(newGrade.gwa),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      grades: [...(prev.grades || []), gradeEntry]
+      grades: [...(prev.grades || []), gradeEntry],
     }))
 
-    setNewGrade({
-      schoolYear: '',
-      gwa: ''
-    })
+    setNewGrade((prev) => ({ ...prev, gwa: '' }))
     setGradeError('')
     setGradesError('')
   }
 
-  const handleRemoveGrade = (index) => {
-    // Don't allow removing last grade
-    if (formData.grades.length <= 1) {
-      return
-    }
-    
-    setFormData(prev => ({
+  const handleRemoveGrade = (gradeToRemove) => {
+    if (isEditing && (formData.grades || []).length <= 1) return
+    setFormData((prev) => ({
       ...prev,
-      grades: prev.grades.filter((_, idx) => idx !== index)
+      grades: prev.grades.filter((g) => g !== gradeToRemove),
     }))
   }
 
-  const handleGraduateClick = () => {
-    setShowGraduateModal(true)
-  }
-
-  const handleGraduateConfirm = (year) => {
-    bulkMarkAsGraduated([scholar.id], year)
-    setShowGraduateModal(false)
-    onClose()
-  }
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-    document.body.style.overflow = 'hidden'
-    document.body.style.paddingRight = `${scrollbarWidth}px`
-
-    return () => {
-      document.body.style.overflow = ''
-      document.body.style.paddingRight = ''
+  const handleGraduateConfirm = async (year) => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      const ok = await bulkMarkAsGraduated([scholar.id], year)
+      if (ok) {
+        setShowGraduateModal(false)
+        onClose()
+      }
+    } finally {
+      setIsSubmitting(false)
     }
-  }, [])
-
-  // Initialize scholarship amount display
-  useEffect(() => {
-    if (scholar?.scholarship_amount) {
-      setScholarshipAmountDisplay(formatNumberWithCommas(scholar.scholarship_amount))
-    }
-  }, [scholar])
-
-  // Format number with thousand separators
-  const formatNumberWithCommas = (value) => {
-    if (!value) return ''
-    const num = parseFloat(value)
-    if (isNaN(num)) return ''
-    return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
   }
-
-  // Parse formatted number to plain number
-  const parseFormattedNumber = (value) => {
-    return value.replace(/,/g, '')
-  }
-
-
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    
-    // Apply input mask for name fields (letters, spaces, hyphens, apostrophes only)
     if (name === 'firstName' || name === 'lastName' || name === 'middleName') {
-      // Remove any characters that are not letters, spaces, hyphens, or apostrophes
       const sanitizedValue = value.replace(/[^a-zA-Z\s\-']/g, '')
       setFormData((prev) => ({ ...prev, [name]: sanitizedValue }))
     } else {
@@ -163,20 +253,22 @@ const ScholarModal = ({ scholar, onClose }) => {
     }
   }
 
+  const handleQuickAmountSelect = (amountValue) => {
+    setScholarshipAmountDisplay(formatNumberWithCommas(amountValue))
+    setFormData((prev) => ({ ...prev, scholarship_amount: String(amountValue) }))
+    setScholarshipAmountError('')
+  }
+
   const handleScholarshipAmountChange = (e) => {
-    const value = e.target.value
-    // Allow only numbers and decimal point
-    const sanitized = value.replace(/[^0-9.]/g, '')
-    
-    // Prevent multiple decimal points
+    const sanitized = e.target.value.replace(/[^0-9.]/g, '')
     const parts = sanitized.split('.')
-    const formatted = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized
-    
-    // Update display with commas
+    const formatted =
+      parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized
+
     if (formatted) {
       const plainNumber = parseFormattedNumber(formatted)
       const numericValue = parseFloat(plainNumber)
-      
+
       if (!isNaN(numericValue) && numericValue >= 0) {
         setScholarshipAmountDisplay(formatNumberWithCommas(plainNumber))
         setFormData((prev) => ({ ...prev, scholarship_amount: plainNumber }))
@@ -191,726 +283,1060 @@ const ScholarModal = ({ scholar, onClose }) => {
     }
   }
 
-  const handleSchoolChange = (value) => {
-    setFormData((prev) => ({ ...prev, school: value }))
-  }
-
-  const handleSchoolSelect = (school) => {
-    setFormData((prev) => ({ ...prev, school: school }))
-  }
-
   const handleKeyDown = (e) => {
-    // When Enter is pressed in an input field
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
       e.preventDefault()
-      
-      // Get all form inputs and selects
       const form = e.target.form
-      const inputs = Array.from(form.querySelectorAll('input, select, textarea'))
+      if (!form) return
+      const inputs = Array.from(form.querySelectorAll('input, textarea'))
       const currentIndex = inputs.indexOf(e.target)
-      
-      // Move to next input
-      if (currentIndex < inputs.length - 1) {
+      if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
         inputs[currentIndex + 1].focus()
       }
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGradesError('')
 
-    // Validate required fields
-    if (!formData.firstName || !formData.lastName || !formData.school) {
-      alert('Please fill in all required fields')
+    if (!validateStep1()) {
+      if (activeStep !== 1) goToStep(1)
       return
     }
 
-    // Validate gender
-    if (!formData.gender) {
-      alert('Please select gender')
-      return
-    }
-
-    // Validate scholarship amount
-    if (!formData.scholarship_amount || formData.scholarship_amount === '' || parseFloat(formData.scholarship_amount) <= 0) {
-      setScholarshipAmountError('Scholarship amount is required and must be greater than 0')
-      return
-    }
-
-    // Check for pending grade (filled but not added)
     let finalGrades = [...(formData.grades || [])]
     if (newGrade.schoolYear && newGrade.gwa && formData.semester) {
       const validation = validateGWA(newGrade.gwa)
       if (validation.valid) {
-        // Auto-add the pending grade
-        const pendingGrade = {
-          schoolYear: newGrade.schoolYear,
-          semester: getSemesterGradeLabel(formData.semester),
-          gwa: parseFloat(newGrade.gwa),
-          createdAt: new Date().toISOString()
-        }
-        finalGrades = [...finalGrades, pendingGrade]
+        finalGrades = [
+          ...finalGrades,
+          {
+            schoolYear: newGrade.schoolYear.trim(),
+            semester: getSemesterGradeLabel(formData.semester),
+            gwa: parseFloat(newGrade.gwa),
+            createdAt: new Date().toISOString(),
+          },
+        ]
       }
     }
 
-    // REQUIRED GRADES VALIDATION
     if (finalGrades.length === 0) {
-      setGradesError('Add at least one grade entry')
+      setGradesError('Add at least one grade entry before saving.')
+      if (activeStep !== 2) {
+        setStepDirection('forward')
+        setActiveStep(2)
+      }
       return
     }
 
-    // Convert scholarship_amount to number
+    const numericAmount = parseFloat(formData.scholarship_amount) || 0
+    const paymentStatus = formData.status || formData.paymentStatus || 'Processing'
     const dataToSubmit = {
       ...formData,
       grades: finalGrades,
       suffix: formData.suffix === 'None' ? null : formData.suffix,
-      scholarship_amount: parseFloat(formData.scholarship_amount) || 0,
-      amount: parseFloat(formData.scholarship_amount) || 0 // Keep amount for backward compatibility
+      scholarship_amount: numericAmount,
+      amount: numericAmount,
+      status: paymentStatus,
+      paymentStatus,
     }
 
-    if (isEditing) {
-      updateScholar(scholar.id, dataToSubmit)
-    } else {
-      addScholar(dataToSubmit)
+    setIsSubmitting(true)
+    try {
+      const ok = isEditing
+        ? await updateScholar(scholar.id, dataToSubmit)
+        : await addScholar(dataToSubmit)
+      if (ok) {
+        onClose()
+      }
+    } finally {
+      setIsSubmitting(false)
     }
-
-    onClose()
   }
 
-  return createPortal(
-    <div 
-      className="fixed z-[100]" 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100dvh',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem'
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div 
-        className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-white px-6 py-4 flex items-center justify-between border-b z-10" style={{ borderColor: '#E5E5EA' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1D1D1F' }}>
-            {isEditing ? 'Edit Scholar' : 'Add New Scholar'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="transition p-2 hover:bg-slate-100 rounded-lg"
-            style={{ color: '#AAAAAA' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#1D1D1F'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#AAAAAA'}
-          >
-            <X className="w-6 h-6" strokeWidth={1.5} />
-          </button>
-        </div>
+  const sortedGrades = [...(formData.grades || [])].sort(
+    (a, b) =>
+      (b.schoolYear || '').localeCompare(a.schoolYear || '') ||
+      (b.createdAt || '').localeCompare(a.createdAt || '')
+  )
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-6 space-y-6">
-          {/* Personal Information */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Personal Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  required
-                  autoFocus
-                  placeholder="Enter first name"
-                  title="Only letters, spaces, hyphens, and apostrophes allowed"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter last name"
-                  title="Only letters, spaces, hyphens, and apostrophes allowed"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Middle Name
-                </label>
-                <input
-                  type="text"
-                  name="middleName"
-                  value={formData.middleName}
-                  onChange={handleChange}
-                  placeholder="Enter middle name"
-                  title="Only letters, spaces, hyphens, and apostrophes allowed"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Suffix
-                </label>
-                <select
-                  name="suffix"
-                  value={formData.suffix || 'None'}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                >
-                  {SUFFIXES.map((suffix) => (
-                    <option key={suffix} value={suffix}>
-                      {suffix}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </div>
-            </div>
+  const liveDraftGwaValid = newGrade.gwa ? validateGWA(newGrade.gwa).valid : false
+  const liveDraftGwaWarn = liveDraftGwaValid ? isGWAWarning(newGrade.gwa) : false
 
-            <div className="mt-2">
-              <p className="text-xs flex items-center gap-2" style={{ color: '#AAAAAA' }}>
-                <span className="font-medium">Note:</span>
-                <span>Name fields accept only letters, spaces, hyphens (-), and apostrophes (')</span>
-              </p>
-            </div>
+  const displayFullName = [
+    formData.firstName?.trim(),
+    formData.middleName?.trim(),
+    formData.lastName?.trim(),
+    formData.suffix && formData.suffix !== 'None' ? formData.suffix : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
-            <div className="grid grid-cols-1 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Barangay <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="barangay"
-                  value={formData.barangay}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                >
-                  {BARANGAYS.map((brgy) => (
-                    <option key={brgy} value={brgy}>
-                      {brgy}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Academic Information */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Academic Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div className="md:col-span-3">
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  School / University <span className="text-red-500">*</span>
-                </label>
-                <SchoolAutocomplete
-                  value={formData.school}
-                  onChange={handleSchoolChange}
-                  onSelect={handleSchoolSelect}
-                  existingSchools={existingSchools}
-                  isEditMode={isEditing}
-                  placeholder={isEditing ? "Select from existing schools..." : "Type school name or select from existing..."}
-                />
-                <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                  {isEditing 
-                    ? "Select from existing schools only" 
-                    : "Select from existing schools or type a new name"}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Year Level <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="yearLevel"
-                  value={formData.yearLevel}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                >
-                  {YEAR_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Semester <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="semester"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                >
-                  {SEMESTERS.map((sem) => (
-                    <option key={sem} value={sem}>
-                      {sem}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Course / Program
-                </label>
-                <input
-                  type="text"
-                  name="course"
-                  value={formData.course}
-                  onChange={handleChange}
-                  placeholder="e.g., BS Computer Science"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Scholarship Details */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Scholarship Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Scholarship Amount (PHP) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={scholarshipAmountDisplay}
-                  onChange={handleScholarshipAmountChange}
-                  required
-                  placeholder="Enter amount (e.g., 25,000)"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: scholarshipAmountError ? '1px solid #FF3B30' : '1px solid #E5E5EA' }}
-                />
-                {scholarshipAmountError && (
-                  <p className="text-xs mt-1 text-red-600">{scholarshipAmountError}</p>
+  return (
+    <>
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent
+          hideClose
+          className="max-w-5xl w-[calc(100%-2rem)] h-[min(765px,92vh)] p-0 overflow-hidden flex flex-col gap-0 rounded-2xl bg-[#F7F8F3]"
+        >
+          {/* Top Modal Header with Integrated Step Switcher */}
+          <div className="px-5 sm:px-6 py-4 bg-white border-b border-border flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-10 h-10 rounded-xl gradient-emerald-gold text-white shadow-sm flex items-center justify-center flex-shrink-0">
+                {isEditing ? (
+                  <GraduationCap className="w-5 h-5" />
+                ) : (
+                  <UserPlus className="w-5 h-5" />
                 )}
-                <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                  Format: 25,000.00 (typed manually)
-                </p>
               </div>
-              {isEditing && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                      Payment Status
-                    </label>
-                    <div className="w-full px-3 py-2 rounded-lg text-sm flex items-center" style={{ border: '1px solid #E5E5EA', backgroundColor: '#F5F5F7' }}>
-                      <span
-                        className="px-3 py-1 rounded-md text-xs font-semibold"
-                        style={{
-                          backgroundColor: formData.status === 'Paid' ? '#D1FAE5' : '#FEF3C7',
-                          color: formData.status === 'Paid' ? '#065F46' : '#92400E',
-                        }}
-                      >
-                        {formData.status || 'Processing'}
-                      </span>
-                    </div>
-                    <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                      Payment status is changed using Mark as Paid or Mark as Unpaid in the Scholars tab.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                      Scholar Status <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex gap-4 mt-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="scholarStatus"
-                          value="Active"
-                          checked={formData.scholarStatus === 'Active' || !formData.scholarStatus}
-                          onChange={handleChange}
-                          className="w-4 h-4"
-                          style={{ accentColor: '#007AFF' }}
-                        />
-                        <span className="text-sm" style={{ color: '#1D1D1F' }}>Active</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="scholarStatus"
-                          value="Graduated"
-                          checked={formData.scholarStatus === 'Graduated'}
-                          onChange={handleChange}
-                          className="w-4 h-4"
-                          style={{ accentColor: '#007AFF' }}
-                        />
-                        <span className="text-sm" style={{ color: '#1D1D1F' }}>Graduated</span>
-                      </label>
-                    </div>
-                  </div>
-                  {formData.scholarStatus === 'Graduated' && (
-                    <div>
-                      <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                        Year Graduated
-                      </label>
-                      <input
-                        type="number"
-                        name="yearGraduated"
-                        value={formData.yearGraduated}
-                        onChange={handleChange}
-                        min="2000"
-                        max="2100"
-                        placeholder="e.g., 2024"
-                        className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E5E5EA' }}
-                      />
-                    </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
+                    {isEditing ? 'Edit Scholar Record' : 'Add New Scholar'}
+                  </DialogTitle>
+                  {isEditing ? (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F2F4EA] text-foreground/80 border border-border">
+                      {formData.scholarStatus || 'Active'}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20">
+                      New Beneficiary
+                    </span>
                   )}
-                </>
-              )}
-              {!isEditing && (
-                <div className="md:col-span-2">
-                  <div className="rounded-lg p-3" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
-                    <p className="text-xs" style={{ color: '#1D1D1F' }}>
-                      <span className="font-semibold">Note:</span> New scholars are automatically set to{' '}
-                      <span className="font-bold">"Active"</span> status with payment status{' '}
-                      <span className="font-bold">"Processing"</span>. You can change these after adding the scholar.
-                    </p>
-                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Contact Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Contact Number
-                </label>
-                <input
-                  type="tel"
-                  name="contactNumber"
-                  value={formData.contactNumber}
-                  onChange={handleChange}
-                  placeholder="09XX XXX XXXX"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="scholar@example.com"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA' }}
-                />
+                <DialogDescription className="text-xs text-muted-foreground truncate">
+                  IskoLayan · Palayan City Scholarship Management System
+                </DialogDescription>
               </div>
             </div>
-          </div>
 
-          {/* Additional Information */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Additional Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
-                  PWD (Person with Disability)
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="is_pwd"
-                      checked={formData.is_pwd === true}
-                      onChange={() => setFormData(prev => ({ ...prev, is_pwd: true }))}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#007AFF' }}
-                    />
-                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Yes</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="is_pwd"
-                      checked={formData.is_pwd === false}
-                      onChange={() => setFormData(prev => ({ ...prev, is_pwd: false }))}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#007AFF' }}
-                    />
-                    <span className="text-sm" style={{ color: '#1D1D1F' }}>No</span>
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-2" style={{ color: '#1D1D1F' }}>
-                  Solo Parent
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="is_solo_parent"
-                      checked={formData.is_solo_parent === true}
-                      onChange={() => setFormData(prev => ({ ...prev, is_solo_parent: true }))}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#007AFF' }}
-                    />
-                    <span className="text-sm" style={{ color: '#1D1D1F' }}>Yes</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="is_solo_parent"
-                      checked={formData.is_solo_parent === false}
-                      onChange={() => setFormData(prev => ({ ...prev, is_solo_parent: false }))}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#007AFF' }}
-                    />
-                    <span className="text-sm" style={{ color: '#1D1D1F' }}>No</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Grades - REQUIRED */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b pb-2" style={{ color: '#1D1D1F', borderColor: '#E5E5EA' }}>
-              Grades <span className="text-red-500">*</span>
-            </h3>
-            
-            {gradesError && (
-              <p className="text-xs mt-2 text-red-600">{gradesError}</p>
-            )}
-            
-            {/* Existing Grades */}
-            {formData.grades && formData.grades.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <p className="text-xs font-semibold" style={{ color: '#AAAAAA' }}>Grade History</p>
-                {formData.grades
-                  .sort((a, b) => b.schoolYear.localeCompare(a.schoolYear) || (b.createdAt || '').localeCompare(a.createdAt || ''))
-                  .map((grade, index) => {
-                    const isLastGrade = formData.grades.length === 1
-                    return (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
-                        <div>
-                          <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                            {grade.schoolYear} - {grade.semester}
-                          </p>
-                          <p className={`text-lg font-bold ${isGWAWarning(grade.gwa) ? 'text-red-600' : ''}`} style={!isGWAWarning(grade.gwa) ? { color: '#10b981' } : {}}>
-                            GWA: {formatGWA(grade.gwa)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveGrade(index)}
-                          disabled={isLastGrade}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
-                          style={{
-                            color: isLastGrade ? '#AAAAAA' : '#DC2626',
-                            backgroundColor: 'transparent',
-                            border: isLastGrade ? '1px solid #AAAAAA' : '1px solid #DC2626',
-                            opacity: isLastGrade ? 0.5 : 1,
-                            cursor: isLastGrade ? 'not-allowed' : 'pointer'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isLastGrade) e.currentTarget.style.backgroundColor = '#FEE2E2'
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isLastGrade) e.currentTarget.style.backgroundColor = 'transparent'
-                          }}
-                          title={isLastGrade ? "A scholar must have at least one grade" : "Remove this grade"}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )
-                  })}
-              </div>
-            )}
-
-            {/* Add New Grade */}
-            <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E5EA' }}>
-              <p className="text-xs font-semibold mb-3" style={{ color: '#1D1D1F' }}>Add Grade Entry</p>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                    School Year
-                  </label>
-                  <input
-                    type="text"
-                    value={newGrade.schoolYear}
-                    onChange={(e) => setNewGrade(prev => ({ ...prev, schoolYear: e.target.value }))}
-                    placeholder="2026-2027"
-                    className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ border: '1px solid #E5E5EA' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                    Semester
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.semester ? getSemesterGradeLabel(formData.semester) : ''}
-                    placeholder="Select semester above"
-                    disabled
-                    className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ 
-                      border: '1px solid #E5E5EA',
-                      backgroundColor: '#F5F5F7',
-                      color: '#AAAAAA',
-                      cursor: 'not-allowed'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: '#1D1D1F' }}>
-                    GWA (1.00 - 5.00)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={GRADING_CONFIG.MIN_GWA}
-                    max={GRADING_CONFIG.MAX_GWA}
-                    value={newGrade.gwa}
-                    onChange={(e) => setNewGrade(prev => ({ ...prev, gwa: e.target.value }))}
-                    placeholder="1.75"
-                    className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ border: '1px solid #E5E5EA' }}
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={handleAddGrade}
-                    className="w-full px-4 py-2 text-sm font-semibold text-white rounded-lg transition flex items-center justify-center gap-2"
-                    style={{ backgroundColor: '#10b981' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add
-                  </button>
-                </div>
-              </div>
-              {gradeError && (
-                <p className="text-xs mt-2 text-red-600">{gradeError}</p>
-              )}
-              <p className="text-xs mt-2" style={{ color: '#AAAAAA' }}>
-                Scale: 1.00 (Highest) to 5.00 (Lowest). Grades above {GRADING_CONFIG.GWA_WARNING} will be highlighted.
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: '#E5E5EA' }}>
-            <div>
-              {isEditing && formData.scholarStatus !== 'Graduated' && (
+            <div className="flex items-center gap-2.5 ml-auto">
+              {/* Step Pill Switcher */}
+              <div className="bg-[#F2F4EA] p-1 rounded-xl border border-border inline-flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={handleGraduateClick}
-                  className="px-4 py-2 text-sm font-semibold rounded-lg transition"
-                  style={{
-                    color: '#FFFFFF',
-                    backgroundColor: '#10b981',
-                    border: '1px solid #10b981'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                  onClick={() => goToStep(1)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 ${
+                    activeStep === 1
+                      ? 'bg-white text-foreground shadow-sm border border-border/70'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  Graduate
+                  <User className="w-3.5 h-3.5 text-brand" />
+                  <span>1. Scholar Information</span>
+                  {step1Complete && activeStep !== 1 && (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-brand" />
+                  )}
                 </button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-semibold rounded-lg transition"
-                style={{ 
-                  color: '#1D1D1F',
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #E5E5EA'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 text-sm font-semibold text-white rounded-lg transition shadow"
-                style={{ backgroundColor: '#007AFF' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
-              >
-                {isEditing ? 'Update Scholar' : 'Add Scholar'}
-              </button>
+
+                <button
+                  type="button"
+                  onClick={() => goToStep(2)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 ${
+                    activeStep === 2
+                      ? 'bg-white text-foreground shadow-sm border border-border/70'
+                      : step2Unlocked
+                      ? 'text-muted-foreground hover:text-foreground'
+                      : 'text-muted-foreground/70 hover:text-foreground'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-brand" />
+                  <span>2. Academic &amp; Grades</span>
+                  {sortedGrades.length > 0 ? (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-brand/15 text-brand">
+                      {sortedGrades.length}
+                    </span>
+                  ) : !step2Unlocked ? (
+                    <Lock className="w-3 h-3 opacity-60" />
+                  ) : null}
+                </button>
+              </div>
+
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  aria-label="Close modal"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-[#F2F4EA] transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </DialogClose>
             </div>
           </div>
-        </form>
-      </div>
+
+          {/* Form Body */}
+          <form
+            id="scholar-modal-form"
+            onSubmit={handleSubmit}
+            onKeyDown={handleKeyDown}
+            className="flex-1 overflow-y-auto px-5 sm:px-6 py-5"
+          >
+            <div
+              key={activeStep}
+              className={`min-h-full flex flex-col ${
+                stepDirection === 'forward'
+                  ? 'animate-module-forward'
+                  : stepDirection === 'backward'
+                  ? 'animate-module-backward'
+                  : ''
+              }`}
+            >
+              {activeStep === 1 ? (
+                <div className="space-y-4">
+                  {/* Card 1: Personal Information */}
+                  <div className="rounded-xl bg-white border border-border p-4 sm:p-5 space-y-4 shadow-[0_1px_2px_rgba(26,26,20,0.03)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-brand" />
+                        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-foreground/85">
+                          Personal Information
+                        </h3>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F2F4EA] text-muted-foreground border border-border">
+                        Required Fields
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+                      <div className="lg:col-span-4 space-y-1.5">
+                        <Label
+                          htmlFor="firstName"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          First Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="firstName"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleChange}
+                          required
+                          autoFocus
+                          placeholder="e.g. Juan"
+                        />
+                      </div>
+
+                      <div className="lg:col-span-4 space-y-1.5">
+                        <Label
+                          htmlFor="lastName"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          Last Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="lastName"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleChange}
+                          required
+                          placeholder="e.g. Dela Cruz"
+                        />
+                      </div>
+
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label
+                          htmlFor="middleName"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          Middle Name
+                        </Label>
+                        <Input
+                          id="middleName"
+                          name="middleName"
+                          value={formData.middleName}
+                          onChange={handleChange}
+                          placeholder="Optional"
+                        />
+                      </div>
+
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Suffix
+                        </Label>
+                        <Select
+                          value={formData.suffix || 'None'}
+                          onValueChange={(val) =>
+                            setFormData((prev) => ({ ...prev, suffix: val }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Suffix" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SUFFIXES.map((suffix) => (
+                              <SelectItem key={suffix} value={suffix}>
+                                {suffix}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+                      <div className="lg:col-span-4 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Gender <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <SegmentedOption
+                            active={formData.gender === 'Male'}
+                            onClick={() =>
+                              setFormData((prev) => ({ ...prev, gender: 'Male' }))
+                            }
+                          >
+                            Male (M)
+                          </SegmentedOption>
+                          <SegmentedOption
+                            active={formData.gender === 'Female'}
+                            onClick={() =>
+                              setFormData((prev) => ({ ...prev, gender: 'Female' }))
+                            }
+                          >
+                            Female (F)
+                          </SegmentedOption>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-4 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Barangay <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.barangay}
+                          onValueChange={(val) =>
+                            setFormData((prev) => ({ ...prev, barangay: val }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Barangay" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BARANGAYS.map((brgy) => (
+                              <SelectItem key={brgy} value={brgy}>
+                                {brgy}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          PWD
+                        </Label>
+                        <div className="flex items-center gap-1.5">
+                          <SegmentedOption
+                            active={!formData.is_pwd}
+                            onClick={() =>
+                              setFormData((prev) => ({ ...prev, is_pwd: false }))
+                            }
+                          >
+                            No
+                          </SegmentedOption>
+                          <SegmentedOption
+                            active={Boolean(formData.is_pwd)}
+                            onClick={() =>
+                              setFormData((prev) => ({ ...prev, is_pwd: true }))
+                            }
+                          >
+                            Yes
+                          </SegmentedOption>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Solo Parent
+                        </Label>
+                        <div className="flex items-center gap-1.5">
+                          <SegmentedOption
+                            active={!formData.is_solo_parent}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                is_solo_parent: false,
+                              }))
+                            }
+                          >
+                            No
+                          </SegmentedOption>
+                          <SegmentedOption
+                            active={Boolean(formData.is_solo_parent)}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                is_solo_parent: true,
+                              }))
+                            }
+                          >
+                            Yes
+                          </SegmentedOption>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Academic Placement & Scholarship */}
+                  <div className="rounded-xl bg-white border border-border p-4 sm:p-5 space-y-4 shadow-[0_1px_2px_rgba(26,26,20,0.03)]">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <School className="w-4 h-4 text-brand" />
+                        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-foreground/85">
+                          Academic Placement &amp; Scholarship
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-semibold text-brand">
+                        {isEditing
+                          ? `Payment: ${formData.status || 'Processing'}`
+                          : 'Defaults: Active · Processing'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+                      <div className="lg:col-span-5 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                            School / University <span className="text-red-500">*</span>
+                          </Label>
+                          {existingSchools.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUseSchoolSelectOnly((prev) => !prev)
+                              }
+                              className="text-[11px] font-medium text-brand hover:underline"
+                            >
+                              {useSchoolSelectOnly
+                                ? 'Type custom'
+                                : 'Choose from list'}
+                            </button>
+                          )}
+                        </div>
+
+                        {useSchoolSelectOnly && existingSchools.length > 0 ? (
+                          <Select
+                            value={
+                              existingSchools.includes(formData.school)
+                                ? formData.school
+                                : ''
+                            }
+                            onValueChange={(val) =>
+                              setFormData((prev) => ({ ...prev, school: val }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select partner school..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {existingSchools.map((school) => (
+                                <SelectItem key={school} value={school}>
+                                  {school}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <SchoolAutocomplete
+                            value={formData.school}
+                            onChange={(val) =>
+                              setFormData((prev) => ({ ...prev, school: val }))
+                            }
+                            onSelect={(school) =>
+                              setFormData((prev) => ({ ...prev, school }))
+                            }
+                            existingSchools={existingSchools}
+                            isEditMode={isEditing}
+                            placeholder={
+                              isEditing
+                                ? 'Select from existing schools...'
+                                : 'Type school or pick from existing...'
+                            }
+                          />
+                        )}
+                      </div>
+
+                      <div className="lg:col-span-3 space-y-1.5">
+                        <Label
+                          htmlFor="course"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          Course / Program
+                        </Label>
+                        <Input
+                          id="course"
+                          name="course"
+                          value={formData.course}
+                          onChange={handleChange}
+                          placeholder="e.g., BS Nursing"
+                        />
+                      </div>
+
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Year Level <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.yearLevel}
+                          onValueChange={(val) =>
+                            setFormData((prev) => ({ ...prev, yearLevel: val }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Year Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {YEAR_LEVELS.map((level) => (
+                              <SelectItem key={level} value={level}>
+                                {level}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Semester <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.semester}
+                          onValueChange={(val) =>
+                            setFormData((prev) => ({ ...prev, semester: val }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Semester" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SEMESTERS.map((sem) => (
+                              <SelectItem key={sem} value={sem}>
+                                {sem}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                      <div className="lg:col-span-4 space-y-1.5">
+                        <Label
+                          htmlFor="scholarshipAmount"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          Scholarship Amount (PHP) <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-xs font-bold text-brand">
+                            ₱
+                          </span>
+                          <Input
+                            id="scholarshipAmount"
+                            type="text"
+                            value={scholarshipAmountDisplay}
+                            onChange={handleScholarshipAmountChange}
+                            required
+                            placeholder="25,000"
+                            className={`pl-7 font-semibold ${
+                              scholarshipAmountError
+                                ? 'border-red-500 focus-visible:ring-red-400'
+                                : ''
+                            }`}
+                          />
+                        </div>
+                        {scholarshipAmountError && (
+                          <p className="text-[11px] font-medium text-red-600">
+                            {scholarshipAmountError}
+                          </p>
+                        )}
+                      </div>
+
+                      {isEditing ? (
+                        <>
+                          <div className="lg:col-span-4 space-y-1.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Scholar Status
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <SegmentedOption
+                                active={(formData.scholarStatus || 'Active') === 'Active'}
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    scholarStatus: 'Active',
+                                  }))
+                                }
+                              >
+                                Active
+                              </SegmentedOption>
+                              <SegmentedOption
+                                active={formData.scholarStatus === 'Graduated'}
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    scholarStatus: 'Graduated',
+                                  }))
+                                }
+                              >
+                                Graduated
+                              </SegmentedOption>
+                            </div>
+                          </div>
+
+                          <div className="lg:col-span-4 space-y-1.5">
+                            {formData.scholarStatus === 'Graduated' ? (
+                              <>
+                                <Label
+                                  htmlFor="yearGraduated"
+                                  className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                                >
+                                  Year Graduated
+                                </Label>
+                                <Input
+                                  id="yearGraduated"
+                                  type="number"
+                                  name="yearGraduated"
+                                  value={formData.yearGraduated || ''}
+                                  onChange={handleChange}
+                                  min="2000"
+                                  max="2100"
+                                  placeholder="e.g., 2026"
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                  Payment Status
+                                </Label>
+                                <div className="h-9 px-3 rounded-lg border border-border bg-[#F7F8F3] flex items-center justify-between">
+                                  <Badge
+                                    variant={
+                                      formData.status === 'Paid' ? 'success' : 'warning'
+                                    }
+                                  >
+                                    {formData.status || 'Processing'}
+                                  </Badge>
+                                  <span className="text-[11px] text-muted-foreground">
+                                    Updated in table actions
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="lg:col-span-8 space-y-1.5">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                            Quick Amounts
+                          </span>
+                          <div className="flex flex-wrap items-center gap-2 min-h-[36px]">
+                            {QUICK_AMOUNTS.map((amt) => {
+                              const isSelectedAmt =
+                                parseFloat(formData.scholarship_amount) === amt
+                              return (
+                                <button
+                                  key={amt}
+                                  type="button"
+                                  onClick={() => handleQuickAmountSelect(amt)}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                                    isSelectedAmt
+                                      ? 'bg-brand/15 border-brand text-brand'
+                                      : 'bg-[#F4F5EF] border-border text-muted-foreground hover:text-foreground hover:border-brand/40'
+                                  }`}
+                                >
+                                  + ₱{amt.toLocaleString('en-US')}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card 3: Contact Information */}
+                  <div className="rounded-xl bg-white border border-border p-4 sm:p-5 space-y-4 shadow-[0_1px_2px_rgba(26,26,20,0.03)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-brand" />
+                        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-foreground/85">
+                          Contact Information
+                        </h3>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-soft/30 text-foreground/80 border border-brand-soft/50">
+                        Optional Details
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="contactNumber"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          Contact Number
+                        </Label>
+                        <Input
+                          id="contactNumber"
+                          type="tel"
+                          name="contactNumber"
+                          value={formData.contactNumber}
+                          onChange={handleChange}
+                          placeholder="09XX XXX XXXX"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="email"
+                          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                        >
+                          Email Address
+                        </Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="scholar@example.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch flex-1">
+                  {/* Step 2 Left Panel: Add Grade Entry + Summary */}
+                  <div className="lg:col-span-5 flex flex-col justify-between gap-4">
+                    <div className="rounded-xl bg-white border border-border overflow-hidden shadow-[0_1px_2px_rgba(26,26,20,0.03)]">
+                      <div className="px-4 py-3 bg-[#F2F4EA] border-b border-border flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-foreground/80">
+                          Add Grade Entry
+                        </span>
+                        <span className="text-[11px] font-semibold text-brand">
+                          1.00–5.00 or 50–100
+                        </span>
+                      </div>
+
+                      <div className="p-4 space-y-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <Label
+                              htmlFor="newGradeSY"
+                              className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                            >
+                              School Year <span className="text-red-500">*</span>
+                            </Label>
+                          </div>
+                          <Input
+                            id="newGradeSY"
+                            type="text"
+                            value={newGrade.schoolYear}
+                            onChange={(e) =>
+                              setNewGrade((prev) => ({
+                                ...prev,
+                                schoolYear: e.target.value,
+                              }))
+                            }
+                            placeholder="2026-2027"
+                          />
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {QUICK_SCHOOL_YEARS.map((sy) => (
+                              <button
+                                key={sy}
+                                type="button"
+                                onClick={() =>
+                                  setNewGrade((prev) => ({ ...prev, schoolYear: sy }))
+                                }
+                                className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
+                                  newGrade.schoolYear === sy
+                                    ? 'bg-brand/15 border-brand text-brand font-semibold'
+                                    : 'bg-[#F7F8F3] border-border text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                {sy}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Semester
+                            </Label>
+                            <div className="h-9 px-3 rounded-lg border border-border bg-[#F7F8F3] flex items-center text-sm font-medium text-foreground/85">
+                              {formData.semester
+                                ? getSemesterGradeLabel(formData.semester)
+                                : 'Not selected'}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="newGradeGwa"
+                              className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                            >
+                              GWA / Grade <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              id="newGradeGwa"
+                              type="number"
+                              step="0.01"
+                              min={GRADING_CONFIG.MIN_GWA}
+                              max={GRADING_CONFIG.MAX_PERCENT}
+                              value={newGrade.gwa}
+                              onChange={(e) => {
+                                setNewGrade((prev) => ({
+                                  ...prev,
+                                  gwa: e.target.value,
+                                }))
+                                setGradeError('')
+                              }}
+                              placeholder="1.75 or 90"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        {liveDraftGwaValid && (
+                          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#F7F8F3] border border-border text-xs">
+                            <span className="text-muted-foreground font-medium">
+                              Preview Standing:
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                                liveDraftGwaWarn
+                                  ? 'bg-red-50 border-red-200 text-red-700'
+                                  : 'bg-brand/10 border-brand/30 text-brand'
+                              }`}
+                            >
+                              {liveDraftGwaWarn ? 'Needs Attention' : 'Good Standing'}
+                            </span>
+                          </div>
+                        )}
+
+                        {gradeError && (
+                          <p className="text-xs font-medium text-red-600 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>{gradeError}</span>
+                          </p>
+                        )}
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAddGrade}
+                          className="w-full border-brand/35 text-brand hover:bg-brand/10 hover:text-brand font-semibold"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add Grade to Record</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Scholar Summary Mini-Card */}
+                    <div className="rounded-xl bg-white border border-border p-4 space-y-2.5 shadow-[0_1px_2px_rgba(26,26,20,0.03)]">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold uppercase tracking-wider text-muted-foreground text-[11px]">
+                          Scholar Summary
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-bold text-brand">
+                          <Wallet className="w-3.5 h-3.5" />
+                          ₱{formatNumberWithCommas(formData.scholarship_amount || 0)}
+                        </span>
+                      </div>
+                      <div className="text-sm font-bold text-foreground truncate">
+                        {displayFullName || 'Unnamed Scholar'}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span>{formData.school || 'No school set'}</span>
+                        <span>·</span>
+                        <span>{formData.yearLevel}</span>
+                        <span>·</span>
+                        <span>Brgy. {formData.barangay}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 2 Right Panel: Parameter-Style Grade History Table */}
+                  <div className="lg:col-span-7 rounded-xl bg-white border border-border overflow-hidden shadow-[0_1px_2px_rgba(26,26,20,0.03)] flex flex-col min-h-full">
+                    <div className="px-4 py-3 bg-[#F2F4EA] border-b border-border grid grid-cols-12 items-center text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex-shrink-0">
+                      <div className="col-span-5">School Year &amp; Term</div>
+                      <div className="col-span-3 text-center">Grade / GWA</div>
+                      <div className="col-span-3 text-center">Standing</div>
+                      <div className="col-span-1 text-right">Action</div>
+                    </div>
+
+                    {gradesError && (
+                      <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2 flex-shrink-0">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{gradesError}</span>
+                      </div>
+                    )}
+
+                    {sortedGrades.length === 0 ? (
+                      <div className="p-8 text-center space-y-2 flex-1 flex flex-col items-center justify-center">
+                        <BookOpen className="w-9 h-9 mx-auto text-brand/40" />
+                        <p className="text-sm font-semibold text-foreground">
+                          No grade entries added yet
+                        </p>
+                        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                          Enter the school year and GWA on the left and click{' '}
+                          <strong>Add Grade to Record</strong>, or fill in the left form and save directly.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border/70 flex-1 overflow-y-auto">
+                        {sortedGrades.map((grade, index) => {
+                          const isLastGrade = isEditing && (formData.grades || []).length === 1
+                          const warn = isGWAWarning(grade.gwa)
+                          return (
+                            <div
+                              key={`${grade.schoolYear}-${grade.semester}-${index}`}
+                              className="px-4 py-3 grid grid-cols-12 items-center even:bg-[#F7F8F3] hover:bg-[#F9F6DF]/70 transition-colors"
+                            >
+                              <div className="col-span-5 min-w-0 pr-2">
+                                <p className="text-sm font-bold text-foreground truncate">
+                                  {grade.schoolYear}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {grade.semester}
+                                </p>
+                              </div>
+
+                              <div className="col-span-3 flex justify-center">
+                                <span
+                                  className={`min-w-[76px] px-3 py-1 rounded-full border text-center text-sm font-extrabold tabular-nums ${
+                                    warn
+                                      ? 'border-red-300 bg-red-50 text-red-700'
+                                      : 'border-brand/40 bg-brand/10 text-brand'
+                                  }`}
+                                >
+                                  {formatGWA(grade.gwa)}
+                                </span>
+                              </div>
+
+                              <div className="col-span-3 flex justify-center">
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wide ${
+                                    warn
+                                      ? 'border-red-200 bg-red-50 text-red-700'
+                                      : 'border-brand/30 bg-white text-brand'
+                                  }`}
+                                >
+                                  {warn ? 'Warning' : 'Good'}
+                                </span>
+                              </div>
+
+                              <div className="col-span-1 flex justify-end">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={isLastGrade}
+                                  onClick={() => handleRemoveGrade(grade)}
+                                  title={
+                                    isLastGrade
+                                      ? 'At least one grade entry is required'
+                                      : 'Remove grade entry'
+                                  }
+                                  className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-35"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </form>
+
+          {/* Sticky Bottom Footer */}
+          <div className="px-5 sm:px-6 py-3.5 bg-white border-t border-border flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+                <span>Cancel</span>
+              </Button>
+
+              {isEditing && formData.scholarStatus !== 'Graduated' && (
+                <Button
+                  type="button"
+                  variant="gold"
+                  size="sm"
+                  onClick={() => setShowGraduateModal(true)}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>Mark Graduated</span>
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              {activeStep === 1 ? (
+                <>
+                  {isEditing && (
+                    <Button
+                      type="submit"
+                      form="scholar-modal-form"
+                      variant="outline"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Update Record'}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="gradient"
+                    onClick={() => goToStep(2)}
+                  >
+                    <span>Next: Academic &amp; Grades</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => goToStep(1)}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back to Scholar Info</span>
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="scholar-modal-form"
+                    variant="gradient"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? 'Saving...'
+                      : isEditing
+                      ? 'Update Record'
+                      : 'Add Scholar'}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {showGraduateModal && (
         <GraduateConfirmModal
           scholar={scholar}
@@ -918,8 +1344,7 @@ const ScholarModal = ({ scholar, onClose }) => {
           onCancel={() => setShowGraduateModal(false)}
         />
       )}
-    </div>,
-    document.body
+    </>
   )
 }
 

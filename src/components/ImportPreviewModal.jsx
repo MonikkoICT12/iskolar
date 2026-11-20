@@ -1,252 +1,227 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
-import { X, AlertCircle, CheckCircle, FileWarning } from 'lucide-react'
+import { AlertCircle, CheckCircle, FileWarning } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
-const ImportPreviewModal = ({ parsedData, duplicates, onConfirm, onCancel }) => {
+const ImportPreviewModal = ({
+  parsedData,
+  duplicates,
+  onConfirm,
+  onCancel,
+}) => {
   const [skipDuplicates, setSkipDuplicates] = useState(true)
 
   const totalRows = parsedData.length
-  const validRows = parsedData.filter(row => row.valid).length
-  const errorRows = parsedData.filter(row => !row.valid)
+  const validRows = parsedData.filter((row) => row.valid).length
+  const errorRows = parsedData.filter((row) => !row.valid)
   const hasDuplicates = duplicates.length > 0
+  const previewRows = parsedData.filter((row) => row.valid).slice(0, 5)
 
-  // Get first 5 valid rows for preview
-  const previewRows = parsedData.filter(row => row.valid).slice(0, 5)
+  return (
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 overflow-x-hidden">
+        <DialogHeader className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-gradient-to-r from-brand/10 to-brand-soft/30 backdrop-blur-xl">
+          <DialogTitle className="text-xl">Import Preview</DialogTitle>
+          <DialogDescription>
+            Review parsed rows, validation errors, and duplicates before saving to Supabase.
+          </DialogDescription>
+        </DialogHeader>
 
-  const handleImport = () => {
-    onConfirm({ skipDuplicates })
-  }
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel()
-      }}
-    >
-      <div
-        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-white px-6 py-4 flex items-center justify-between border-b z-10" style={{ borderColor: '#E5E5EA' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1D1D1F' }}>
-            Import Preview
-          </h2>
-          <button
-            onClick={onCancel}
-            className="transition p-2 hover:bg-slate-100 rounded-lg"
-            style={{ color: '#AAAAAA' }}
-          >
-            <X className="w-6 h-6" strokeWidth={1.5} />
-          </button>
-        </div>
-
-        {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#F5F5F7', border: '1px solid #E5E5EA' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: '#AAAAAA' }}>
+            <div className="p-4 rounded-xl bg-muted/80 border border-border">
+              <p className="text-xs font-semibold text-muted-foreground mb-1">
                 Total Rows
               </p>
-              <p className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>
-                {totalRows}
-              </p>
+              <p className="text-2xl font-bold text-foreground">{totalRows}</p>
             </div>
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#E8F5E9', border: '1px solid #4CAF50' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: '#2E7D32' }}>
+            <div className="p-4 rounded-xl bg-brand/15 border border-brand/35">
+              <p className="text-xs font-semibold text-brand mb-1">
                 Valid Rows
               </p>
-              <p className="text-2xl font-bold" style={{ color: '#2E7D32' }}>
-                {validRows}
-              </p>
+              <p className="text-2xl font-bold text-brand">{validRows}</p>
             </div>
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#FFEBEE', border: '1px solid #F44336' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: '#C62828' }}>
+            <div className="p-4 rounded-xl bg-red-50 border border-red-300">
+              <p className="text-xs font-semibold text-red-700 mb-1">
                 Rows with Errors
               </p>
-              <p className="text-2xl font-bold" style={{ color: '#C62828' }}>
+              <p className="text-2xl font-bold text-red-700">
                 {errorRows.length}
               </p>
             </div>
           </div>
 
-          {/* Error Rows */}
           {errorRows.length > 0 && (
-            <div className="rounded-lg p-4" style={{ backgroundColor: '#FFF3E0', border: '1px solid #FF9800' }}>
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#E65100' }} />
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm mb-2" style={{ color: '#E65100' }}>
-                    Rows with Errors (will be skipped)
-                  </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {errorRows.map((row) => (
-                      <div key={row.rowIndex} className="text-xs p-2 rounded" style={{ backgroundColor: '#FFFFFF' }}>
-                        <p className="font-semibold" style={{ color: '#1D1D1F' }}>
-                          Row {row.rowIndex}: {row.data.firstName} {row.data.lastName}
-                        </p>
-                        <ul className="list-disc list-inside mt-1" style={{ color: '#C62828' }}>
-                          {row.errors.map((error, idx) => (
-                            <li key={idx}>{error}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
+            <div className="rounded-xl p-4 bg-highlight/20 border border-highlight/60 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-foreground flex-shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-2">
+                <h3 className="font-bold text-sm text-foreground">
+                  Rows with Errors (will be skipped)
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {errorRows.map((row) => (
+                    <div
+                      key={row.rowIndex}
+                      className="text-xs p-2.5 rounded-lg bg-white/90 border border-highlight/50"
+                    >
+                      <p className="font-semibold text-foreground">
+                        Row {row.rowIndex}: {row.data.firstName}{' '}
+                        {row.data.lastName}
+                      </p>
+                      <ul className="list-disc list-inside mt-1 text-red-600">
+                        {row.errors.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Duplicates */}
           {hasDuplicates && (
-            <div className="rounded-lg p-4" style={{ backgroundColor: '#FFF9C4', border: '1px solid #FBC02D' }}>
-              <div className="flex items-start gap-3">
-                <FileWarning className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#F57F17' }} />
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm mb-2" style={{ color: '#F57F17' }}>
-                    {duplicates.length} Duplicate Scholar{duplicates.length > 1 ? 's' : ''} Detected
+            <div className="rounded-xl p-4 bg-brand-soft/30 border border-highlight/60 flex items-start gap-3">
+              <FileWarning className="w-5 h-5 text-foreground flex-shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="font-bold text-sm text-foreground">
+                    {duplicates.length} Duplicate Scholar
+                    {duplicates.length > 1 ? 's' : ''} Detected
                   </h3>
-                  <p className="text-xs mb-3" style={{ color: '#1D1D1F' }}>
-                    Scholars with the same full name and school already exist in the system.
+                  <p className="text-xs text-foreground/80">
+                    Scholars with the same full name and school already exist in Supabase.
                   </p>
-                  
-                  <div className="space-y-2 mb-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={skipDuplicates}
-                        onChange={() => setSkipDuplicates(true)}
-                        className="w-4 h-4"
-                        style={{ accentColor: '#007AFF' }}
-                      />
-                      <span className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                        Skip Duplicates (recommended)
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={!skipDuplicates}
-                        onChange={() => setSkipDuplicates(false)}
-                        className="w-4 h-4"
-                        style={{ accentColor: '#007AFF' }}
-                      />
-                      <span className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                        Overwrite Existing Data
-                      </span>
-                    </label>
-                  </div>
+                </div>
 
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {duplicates.map((dup, idx) => (
-                      <div key={idx} className="text-xs p-2 rounded" style={{ backgroundColor: '#FFFFFF' }}>
-                        <p className="font-semibold" style={{ color: '#1D1D1F' }}>
-                          {dup.newScholar.firstName} {dup.newScholar.lastName} - {dup.newScholar.school}
-                        </p>
-                      </div>
-                    ))}
+                <RadioGroup
+                  value={skipDuplicates ? 'skip' : 'overwrite'}
+                  onValueChange={(val) => setSkipDuplicates(val === 'skip')}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="skip" id="dup-skip" />
+                    <Label htmlFor="dup-skip" className="cursor-pointer font-semibold">
+                      Skip Duplicates (recommended)
+                    </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="overwrite" id="dup-overwrite" />
+                    <Label
+                      htmlFor="dup-overwrite"
+                      className="cursor-pointer font-semibold"
+                    >
+                      Overwrite Existing Data
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {duplicates.map((dup, idx) => (
+                    <div
+                      key={idx}
+                      className="text-xs p-2 rounded-lg bg-white/90 border border-highlight/50 font-medium text-foreground"
+                    >
+                      {dup.newScholar.firstName} {dup.newScholar.lastName} —{' '}
+                      {dup.newScholar.school}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Preview Table */}
           {previewRows.length > 0 && (
-            <div>
-              <h3 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: '#1D1D1F' }}>
-                <CheckCircle className="w-4 h-4" style={{ color: '#4CAF50' }} />
+            <div className="space-y-3">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-brand" />
                 Preview (First 5 Valid Rows)
               </h3>
-              <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid #E5E5EA' }}>
-                <table className="w-full text-xs">
-                  <thead style={{ backgroundColor: '#F5F5F7' }}>
-                    <tr>
-                      <th className="py-2 px-3 text-left font-semibold" style={{ color: '#1D1D1F' }}>
-                        Name
-                      </th>
-                      <th className="py-2 px-3 text-left font-semibold" style={{ color: '#1D1D1F' }}>
-                        School
-                      </th>
-                      <th className="py-2 px-3 text-left font-semibold" style={{ color: '#1D1D1F' }}>
-                        Year Level
-                      </th>
-                      <th className="py-2 px-3 text-right font-semibold" style={{ color: '#1D1D1F' }}>
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Name</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>Year Level</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {previewRows.map((row, idx) => (
-                      <tr key={idx} className="border-t" style={{ borderColor: '#E5E5EA' }}>
-                        <td className="py-2 px-3" style={{ color: '#1D1D1F' }}>
+                      <TableRow key={idx}>
+                        <TableCell className="text-xs font-semibold text-foreground">
                           {row.data.firstName} {row.data.lastName}
-                        </td>
-                        <td className="py-2 px-3" style={{ color: '#1D1D1F' }}>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
                           {row.data.school}
-                        </td>
-                        <td className="py-2 px-3" style={{ color: '#1D1D1F' }}>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
                           {row.data.yearLevel}
-                        </td>
-                        <td className="py-2 px-3 text-right font-semibold" style={{ color: '#10b981' }}>
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-bold text-brand">
                           ₱{row.data.scholarship_amount.toLocaleString('en-PH')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               {validRows > 5 && (
-                <p className="text-xs mt-2" style={{ color: '#AAAAAA' }}>
-                  ... and {validRows - 5} more valid row{validRows - 5 > 1 ? 's' : ''}
+                <p className="text-xs text-muted-foreground">
+                  ... and {validRows - 5} more valid row
+                  {validRows - 5 > 1 ? 's' : ''}
                 </p>
               )}
             </div>
           )}
 
-          {/* Summary Message */}
-          <div className="rounded-lg p-4" style={{ backgroundColor: '#E3F2FD', border: '1px solid #2196F3' }}>
-            <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-              {validRows} scholar{validRows !== 1 ? 's' : ''} will be imported.
-              {errorRows.length > 0 && ` ${errorRows.length} row${errorRows.length > 1 ? 's' : ''} with errors will be skipped.`}
-              {hasDuplicates && skipDuplicates && ` ${duplicates.length} duplicate${duplicates.length > 1 ? 's' : ''} will be skipped.`}
-              {hasDuplicates && !skipDuplicates && ` ${duplicates.length} existing record${duplicates.length > 1 ? 's' : ''} will be overwritten.`}
+          <div className="rounded-xl p-4 gradient-emerald-gold-soft border border-brand/30">
+            <p className="text-sm font-semibold text-foreground">
+              {validRows} scholar{validRows !== 1 ? 's' : ''} ready.
+              {errorRows.length > 0 &&
+                ` ${errorRows.length} error row${errorRows.length > 1 ? 's' : ''} skipped.`}
+              {hasDuplicates &&
+                skipDuplicates &&
+                ` ${duplicates.length} duplicate${duplicates.length > 1 ? 's' : ''} skipped.`}
+              {hasDuplicates &&
+                !skipDuplicates &&
+                ` ${duplicates.length} existing record${duplicates.length > 1 ? 's' : ''} overwritten.`}
             </p>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-white px-6 py-4 flex items-center justify-end gap-3 border-t" style={{ borderColor: '#E5E5EA' }}>
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-semibold rounded-lg transition"
-            style={{
-              color: '#1D1D1F',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E5EA'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-          >
+        <DialogFooter className="sticky bottom-0 px-6 py-4 border-t border-border bg-white/95 backdrop-blur-xl">
+          <Button variant="outline" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            onClick={handleImport}
+          </Button>
+          <Button
+            variant="gradient"
+            onClick={() => onConfirm({ skipDuplicates })}
             disabled={validRows === 0}
-            className="px-6 py-2 text-sm font-semibold text-white rounded-lg transition shadow disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#007AFF' }}
-            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#0051D5')}
-            onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#007AFF')}
           >
             Import {validRows} Scholar{validRows !== 1 ? 's' : ''}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

@@ -11,27 +11,42 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
-  }
+    detectSessionInUrl: false,
+  },
 })
 
-// Helper function to handle Supabase errors
+// Helper function to sanitize Supabase errors without leaking internal schema details
 export const handleSupabaseError = (error) => {
   console.error('Supabase error:', error)
-  
+
+  if (!error) {
+    return 'An unexpected error occurred'
+  }
+
   if (error.code === 'PGRST116') {
     return 'No data found'
   }
-  
+
   if (error.code === '23505') {
     return 'This record already exists'
   }
-  
-  if (error.message) {
+
+  if (error.code === '42501' || error.status === 401 || error.status === 403) {
+    return 'Permission denied. Please verify your administrator session.'
+  }
+
+  if (error.code === '23514' || error.code === '23502' || error.code === '22P02') {
+    return 'Invalid input values. Please check your entries and try again.'
+  }
+
+  if (
+    typeof error.message === 'string' &&
+    error.message.toLowerCase().includes('session')
+  ) {
     return error.message
   }
-  
-  return 'An unexpected error occurred'
+
+  return 'Unable to complete the database request. Please try again.'
 }
 
 // Check if Supabase is configured

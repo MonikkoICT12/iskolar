@@ -3,28 +3,28 @@
 // Year Level Colors - shared between Dashboard and YearLevelStats
 export const YEAR_LEVEL_COLORS = {
   '1st Year': {
-    bg: 'bg-blue-500',
-    text: 'text-blue-500',
-    bgLight: 'bg-blue-50',
-    border: 'border-blue-200'
+    bg: 'bg-[#587529]',
+    text: 'text-[#587529]',
+    bgLight: 'bg-[#587529]/10',
+    border: 'border-[#587529]/30'
   },
   '2nd Year': {
-    bg: 'bg-emerald-500',
-    text: 'text-emerald-500',
-    bgLight: 'bg-emerald-50',
-    border: 'border-emerald-200'
+    bg: 'bg-[#71951E]',
+    text: 'text-[#587529]',
+    bgLight: 'bg-[#71951E]/15',
+    border: 'border-[#71951E]/35'
   },
   '3rd Year': {
-    bg: 'bg-amber-500',
-    text: 'text-amber-500',
-    bgLight: 'bg-amber-50',
-    border: 'border-amber-200'
+    bg: 'bg-[#F4BE38]',
+    text: 'text-[#1A1A14]',
+    bgLight: 'bg-[#F4BE38]/20',
+    border: 'border-[#F4BE38]/50'
   },
   '4th Year': {
-    bg: 'bg-purple-500',
-    text: 'text-purple-500',
-    bgLight: 'bg-purple-50',
-    border: 'border-purple-200'
+    bg: 'bg-[#EDDA5E]',
+    text: 'text-[#1A1A14]',
+    bgLight: 'bg-[#EDDA5E]/30',
+    border: 'border-[#EDDA5E]/60'
   }
 }
 

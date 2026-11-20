@@ -1,227 +1,69 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { Award, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, ShieldCheck } from 'lucide-react'
+import AdminLoginForm from './AdminLoginForm'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 const SignIn = () => {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-
-  const COLORS = {
-    primary: '#007AFF',
-    background: '#F5F5F7',
-    text: '#1D1D1F',
-    secondary: '#AAAAAA',
-    error: '#FF3B30',
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    try {
-      await signIn(email, password)
-      navigate('/admin')
-    } catch (err) {
-      console.error('Sign in error:', err)
-      
-      // Hide password on failed login
-      setShowPassword(false)
-      
-      // Friendly error messages
-      if (err.message?.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please try again.')
-      } else if (err.message?.includes('Email not confirmed')) {
-        setError('Please confirm your email address before signing in.')
-      } else if (err.message?.includes('User not found')) {
-        setError('Admin account not set up yet. Please contact your system administrator.')
-      } else {
-        setError(err.message || 'Admin account not set up yet. Please contact your system administrator.')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: COLORS.background }}
-    >
-      <div className="w-full max-w-md">
-        {/* Logo and Title */}
-        <div className="text-center mb-8">
+    <div className="bg-frosted-canvas min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden">
+      <div className="w-72 h-72 rounded-full bg-brand/20 blur-3xl absolute -top-12 -left-12 pointer-events-none animate-float-slow" />
+      <div className="w-72 h-72 rounded-full bg-highlight/25 blur-3xl absolute -bottom-12 -right-12 pointer-events-none animate-float-slow" />
+
+      <div className="w-full max-w-md relative z-10 animate-fade-up">
+        <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-              <Award className="w-10 h-10 text-white" strokeWidth={2} />
-            </div>
+            <img
+              src="/logo/iskolayan-square-light.png"
+              alt="IskoLayan Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-xl shadow-[#587529]/20"
+            />
           </div>
-          <h1 
-            className="text-2xl font-bold mb-2"
-            style={{ color: COLORS.text }}
-          >
-            Admin Login
+          <Badge variant="gold" className="mb-2">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Admin Portal
+          </Badge>
+          <h1 className="text-2xl font-extrabold text-foreground">
+            IskoLayan Admin Login
           </h1>
-          <p style={{ color: COLORS.secondary }}>
+          <p className="text-sm text-muted-foreground mt-1">
             Palayan City Scholarship Management System
           </p>
         </div>
 
-        {/* Sign In Form */}
-        <div 
-          className="bg-white rounded-xl shadow-sm p-8"
-          style={{ border: '1px solid #E5E5EA' }}
-        >
-          <form onSubmit={handleSubmit}>
-            {/* Error Message */}
-            {error && (
-              <div 
-                className="mb-4 p-3 rounded-lg flex items-start gap-2"
-                style={{ backgroundColor: 'rgba(255, 59, 48, 0.1)' }}
-              >
-                <AlertCircle 
-                  className="w-5 h-5 flex-shrink-0 mt-0.5" 
-                  style={{ color: COLORS.error }} 
-                />
-                <p 
-                  className="text-sm"
-                  style={{ color: COLORS.error }}
-                >
-                  {error}
-                </p>
-              </div>
-            )}
+        <Card className="p-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Sign in to continue</CardTitle>
+            <CardDescription>
+              Use your authorized LGU Supabase administrator credentials.
+            </CardDescription>
+          </CardHeader>
 
-            {/* Email Field */}
-            <div className="mb-4">
-              <label 
-                htmlFor="email"
-                className="block text-sm font-medium mb-2"
-                style={{ color: COLORS.text }}
+          <CardContent className="pt-4">
+            <AdminLoginForm idPrefix="page-login" />
+
+            <div className="mt-5 text-center">
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                onClick={() => navigate('/')}
               >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full px-4 py-2 rounded-lg text-sm transition-all duration-150"
-                style={{
-                  border: '1px solid #E5E5EA',
-                  color: COLORS.text,
-                  backgroundColor: loading ? '#F5F5F7' : '#FFFFFF',
-                }}
-                onFocus={(e) => {
-                  if (!loading) e.currentTarget.style.borderColor = COLORS.primary
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E5E5EA'
-                }}
-                placeholder="admin@example.com"
-              />
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Public Portal
+              </Button>
             </div>
-
-            {/* Password Field */}
-            <div className="mb-6">
-              <label 
-                htmlFor="password"
-                className="block text-sm font-medium mb-2"
-                style={{ color: COLORS.text }}
-              >
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="w-full px-4 py-2 pr-10 rounded-lg text-sm transition-all duration-150"
-                  style={{
-                    border: '1px solid #E5E5EA',
-                    color: COLORS.text,
-                    backgroundColor: loading ? '#F5F5F7' : '#FFFFFF',
-                  }}
-                  onFocus={(e) => {
-                    if (!loading) e.currentTarget.style.borderColor = COLORS.primary
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = '#E5E5EA'
-                  }}
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 transition-colors disabled:opacity-50"
-                  style={{ color: COLORS.secondary }}
-                  onMouseEnter={(e) => {
-                    if (!loading) e.currentTarget.style.color = COLORS.text
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!loading) e.currentTarget.style.color = COLORS.secondary
-                  }}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Sign In Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-medium transition-all duration-150 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: COLORS.primary,
-                color: '#FFFFFF',
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#0051D5'
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = COLORS.primary
-              }}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Back to Home Link */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/')}
-              disabled={loading}
-              className="text-sm transition-all duration-150 disabled:opacity-50"
-              style={{ color: COLORS.primary }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.textDecoration = 'underline'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.textDecoration = 'none'
-              }}
-            >
-              Back to Home
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

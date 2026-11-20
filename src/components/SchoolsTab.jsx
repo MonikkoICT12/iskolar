@@ -1,21 +1,47 @@
-import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { Search, Eye, Edit2, X, School, Calendar } from 'lucide-react'
+import { useState } from 'react'
+import { Search, Eye, Edit2, School, Calendar } from 'lucide-react'
 import useScholarStore from '../store/scholarStore'
 import { formatScholarName } from '../utils/helpers'
 import AdvanceTermModal from './AdvanceTermModal'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const SchoolsTab = () => {
-  const { 
-    getSchoolsList, 
+  const {
+    getSchoolsList,
+    getAllSchoolsList,
     getScholarsBySchool,
     updateSchoolName,
     getActiveScholars,
     bulkUpdateScholars,
     bulkMarkAsGraduated,
-    showToast
+    showToast,
   } = useScholarStore()
-  
+
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedSchool, setSelectedSchool] = useState(null)
@@ -24,13 +50,13 @@ const SchoolsTab = () => {
   const [error, setError] = useState('')
   const [advanceTermModalOpen, setAdvanceTermModalOpen] = useState(false)
   const [advanceTermSchool, setAdvanceTermSchool] = useState(null)
-  const [undoStack, setUndoStack] = useState(null)
 
-  const schools = getSchoolsList() // Only schools with active scholars
+  const schools = getSchoolsList()
   const allActiveScholars = getActiveScholars()
 
   const handleViewSchool = (school) => {
     setSelectedSchool(school)
+    setSearchTerm('')
     setViewModalOpen(true)
   }
 
@@ -41,22 +67,33 @@ const SchoolsTab = () => {
     setEditModalOpen(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     const trimmed = editSchoolName.trim().replace(/\s+/g, ' ')
-    
+    const normalizedOld = (selectedSchool || '').trim().replace(/\s+/g, ' ')
+
     if (!trimmed) {
       setError('School name cannot be empty')
       return
     }
 
-    const result = updateSchoolName(selectedSchool, trimmed)
+    const isDuplicate = getAllSchoolsList().some(
+      (s) =>
+        s.toLowerCase().replace(/\s+/g, ' ') === trimmed.toLowerCase() &&
+        s.toLowerCase().replace(/\s+/g, ' ') !== normalizedOld.toLowerCase()
+    )
+    if (isDuplicate) {
+      setError('This school already exists')
+      return
+    }
+
+    const result = await updateSchoolName(selectedSchool, trimmed)
     if (result) {
       setEditModalOpen(false)
       setSelectedSchool(null)
       setEditSchoolName('')
       setError('')
     } else {
-      setError('This school already exists')
+      setError('Failed to update school name in database')
     }
   }
 
@@ -65,474 +102,329 @@ const SchoolsTab = () => {
     setAdvanceTermModalOpen(true)
   }
 
-  const handleApplyAdvanceTerm = (changes) => {
-    // Save undo information
-    setUndoStack({
-      type: 'advanceTerm',
-      changes: changes.map(c => ({
-        id: c.id,
-        oldYearLevel: c.originalYearLevel,
-        oldSemester: c.originalSemester,
-        oldStatus: c.originalStatus,
-        oldScholarStatus: c.originalScholarStatus,
-        oldYearGraduated: c.originalYearGraduated
-      }))
-    })
+  const triggerUndoAdvanceTerm = async (undoSnapshot) => {
+    const results = await Promise.all(
+      undoSnapshot.map((change) =>
+        bulkUpdateScholars(
+          [change.id],
+          {
+            yearLevel: change.oldYearLevel,
+            semester: change.oldSemester,
+            status: change.oldStatus,
+            scholarStatus: change.oldScholarStatus,
+            yearGraduated: change.oldYearGraduated,
+          },
+          { silent: true }
+        )
+      )
+    )
+    if (!results.some((ok) => ok === false)) {
+      showToast('Term advance changes undone', 'success')
+    }
+  }
 
-    // Apply changes
-    changes.forEach(change => {
+  const handleApplyAdvanceTerm = async (changes) => {
+    const undoSnapshot = changes.map((c) => ({
+      id: c.id,
+      oldYearLevel: c.originalYearLevel,
+      oldSemester: c.originalSemester,
+      oldStatus: c.originalStatus,
+      oldScholarStatus: c.originalScholarStatus,
+      oldYearGraduated: c.originalYearGraduated,
+    }))
+
+    const graduatedIds = changes
+      .filter((c) => c.scholarStatus === 'Graduated')
+      .map((c) => c.id)
+
+    const regularChanges = changes.filter(
+      (c) => c.scholarStatus !== 'Graduated'
+    )
+
+    const tasks = []
+    if (graduatedIds.length > 0) {
+      tasks.push(bulkMarkAsGraduated(graduatedIds, null, { silent: true }))
+    }
+
+    regularChanges.forEach((change) => {
       const updates = {}
       if (change.yearLevel) updates.yearLevel = change.yearLevel
       if (change.semester) updates.semester = change.semester
       if (change.status) updates.status = change.status
       if (change.scholarStatus) updates.scholarStatus = change.scholarStatus
-      if (change.yearGraduated !== undefined) updates.yearGraduated = change.yearGraduated
+      if (change.yearGraduated !== undefined)
+        updates.yearGraduated = change.yearGraduated
 
-      if (change.scholarStatus === 'Graduated') {
-        bulkMarkAsGraduated([change.id])
-      } else {
-        bulkUpdateScholars([change.id], updates)
+      if (Object.keys(updates).length > 0) {
+        tasks.push(bulkUpdateScholars([change.id], updates, { silent: true }))
       }
     })
 
-    const promoted = changes.filter(c => c.yearLevel).length
-    const graduated = changes.filter(c => c.scholarStatus === 'Graduated').length
-    const termChanged = changes.filter(c => c.semester).length
+    const results = await Promise.all(tasks)
+    if (results.some((ok) => ok === false)) return
 
-    let message = []
+    const promoted = changes.filter((c) => c.yearLevel).length
+    const graduated = graduatedIds.length
+    const termChanged = changes.filter((c) => c.semester).length
+
+    const message = []
     if (promoted > 0) message.push(`${promoted} promoted`)
     if (graduated > 0) message.push(`${graduated} graduated`)
     if (termChanged > 0) message.push(`${termChanged} moved to next term`)
 
-    showToast(`Term advanced: ${message.join(', ')}`, 'success')
+    showToast(`Term advanced: ${message.join(', ')}`, 'success', {
+      duration: 7000,
+      action: {
+        label: 'Undo',
+        onClick: () => triggerUndoAdvanceTerm(undoSnapshot),
+      },
+    })
   }
 
-  const handleUndo = () => {
-    if (!undoStack) return
-
-    if (undoStack.type === 'advanceTerm') {
-      undoStack.changes.forEach(change => {
-        const updates = {
-          yearLevel: change.oldYearLevel,
-          semester: change.oldSemester,
-          status: change.oldStatus,
-          scholarStatus: change.oldScholarStatus,
-          yearGraduated: change.oldYearGraduated
-        }
-        bulkUpdateScholars([change.id], updates)
-      })
-      showToast('Changes undone', 'success')
-    }
-
-    setUndoStack(null)
-  }
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (viewModalOpen || editModalOpen || advanceTermModalOpen) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-      document.body.style.overflow = 'hidden'
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-
-      return () => {
-        document.body.style.overflow = ''
-        document.body.style.paddingRight = ''
-      }
-    }
-  }, [viewModalOpen, editModalOpen])
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      Processing: 'bg-amber-100 text-amber-700',
-      Paid: 'bg-emerald-100 text-emerald-700',
-    }
-    return badges[status] || 'bg-slate-100 text-slate-700'
-  }
+  const selectedSchoolScholars = selectedSchool
+    ? getScholarsBySchool(selectedSchool)
+    : []
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2" style={{ color: '#1D1D1F' }}>
-          Schools
-        </h2>
-        <p style={{ color: '#AAAAAA' }}>
-          View schools and the active scholars in each, and correct school names if needed.
-        </p>
+    <div className="w-full space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fade-up">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+            Partner Schools
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Inspect active scholars by institution, rename schools, or advance academic terms.
+          </p>
+        </div>
+        <Badge variant="gold" className="self-start sm:self-auto px-3 py-1">
+          {schools.length} Active {schools.length === 1 ? 'School' : 'Schools'}
+        </Badge>
       </div>
 
-      {/* Schools Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: '1px solid #E5E5EA' }}>
-        <table className="w-full">
-          <thead style={{ backgroundColor: '#F5F5F7' }}>
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                School / University
-              </th>
-              <th className="px-6 py-3 text-center text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                Active Scholars
-              </th>
-              <th className="px-6 py-3 text-right text-sm font-semibold" style={{ color: '#1D1D1F' }}>
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="overflow-hidden animate-fade-up" style={{ animationDelay: '60ms' }}>
+        <Table wrapperClassName="max-h-[calc(100vh-16rem)] min-h-[280px]">
+          <TableHeader className="sticky top-0 z-20 bg-[#F6F6F1] shadow-[0_1px_0_0_hsl(var(--border))]">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>School / University</TableHead>
+              <TableHead className="text-center">Active Scholars</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {schools.length === 0 ? (
-              <tr>
-                <td colSpan="3" className="px-6 py-12 text-center" style={{ color: '#AAAAAA' }}>
-                  <School className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <TableRow>
+                <TableCell colSpan={3} className="py-12 text-center text-muted-foreground">
+                  <School className="w-12 h-12 mx-auto mb-3 opacity-40" />
                   <p>No schools with active scholars yet.</p>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
-              schools.map((school, index) => {
+              schools.map((school) => {
                 const scholarCount = getScholarsBySchool(school).length
                 return (
-                  <tr 
-                    key={index}
-                    className="border-t cursor-pointer"
-                    style={{ borderColor: '#E5E5EA' }}
+                  <TableRow
+                    key={school}
+                    className="cursor-pointer"
                     onClick={() => handleViewSchool(school)}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <td className="px-6 py-4" style={{ color: '#1D1D1F' }}>
+                    <TableCell className="font-semibold text-foreground">
                       <div className="flex items-center gap-3">
-                        <School className="w-5 h-5" style={{ color: '#007AFF' }} />
-                        <span className="font-medium">{school}</span>
+                        <div className="w-8 h-8 rounded-lg bg-brand/15 border border-border flex items-center justify-center flex-shrink-0">
+                          <School className="w-4 h-4 text-brand" />
+                        </div>
+                        <span>{school}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-center" style={{ color: '#AAAAAA' }}>
-                      {scholarCount} {scholarCount === 1 ? 'scholar' : 'scholars'}
-                    </td>
-                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleViewSchool(school)}
-                          className="p-2 rounded-lg transition-all duration-150"
-                          style={{ color: '#007AFF' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(0, 122, 255, 0.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }}
-                          title="View scholars"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEditSchool(school)}
-                          className="p-2 rounded-lg transition-all duration-150"
-                          style={{ color: '#007AFF' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(0, 122, 255, 0.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }}
-                          title="Edit school name"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleAdvanceTerm(school)}
-                          className="p-2 rounded-lg transition-all duration-150"
-                          style={{ color: '#10b981' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }}
-                          title="Advance Term"
-                        >
-                          <Calendar className="w-4 h-4" />
-                        </button>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="default">
+                        {scholarCount} {scholarCount === 1 ? 'scholar' : 'scholars'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewSchool(school)}
+                              aria-label="View scholars"
+                            >
+                              <Eye className="w-4 h-4 text-brand" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View scholars</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditSchool(school)}
+                              aria-label="Edit school name"
+                            >
+                              <Edit2 className="w-4 h-4 text-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Rename school</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleAdvanceTerm(school)}
+                              aria-label="Advance term"
+                            >
+                              <Calendar className="w-4 h-4 text-brand" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Advance Term</TooltipContent>
+                        </Tooltip>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
-      {/* View Scholars Modal */}
-      {viewModalOpen && selectedSchool && createPortal(
-        <div 
-          className="fixed z-[100]" 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100dvh',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setViewModalOpen(false)
-          }}
-        >
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: '#E5E5EA' }}>
-              <div>
-                <h3 className="text-xl font-semibold" style={{ color: '#1D1D1F' }}>
-                  {selectedSchool}
-                </h3>
-                <p className="text-sm mt-1" style={{ color: '#AAAAAA' }}>
-                  {getScholarsBySchool(selectedSchool).length} active {getScholarsBySchool(selectedSchool).length === 1 ? 'scholar' : 'scholars'}
-                </p>
-              </div>
-              <button
-                onClick={() => setViewModalOpen(false)}
-                className="p-2 rounded-lg transition-all"
-                style={{ color: '#AAAAAA' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* View Scholars Dialog */}
+      <Dialog
+        open={viewModalOpen && !!selectedSchool}
+        onOpenChange={(open) => !open && setViewModalOpen(false)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b border-border bg-gradient-to-r from-brand/10 to-brand-soft/25">
+            <DialogTitle>{selectedSchool}</DialogTitle>
+            <DialogDescription>
+              {selectedSchoolScholars.length} active{' '}
+              {selectedSchoolScholars.length === 1 ? 'scholar' : 'scholars'}
+            </DialogDescription>
+          </DialogHeader>
 
-            {/* Search Box */}
-            <div className="px-6 py-4 border-b" style={{ borderColor: '#E5E5EA' }}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AAAAAA' }} strokeWidth={1.5} />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by name or course..."
-                  className="w-full pl-9 pr-4 py-2 rounded-lg text-sm"
-                  style={{ border: '1px solid #E5E5EA', color: '#1D1D1F' }}
-                />
-              </div>
-            </div>
-
-            {/* Scholars Table */}
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full">
-                <thead style={{ backgroundColor: '#F5F5F7', position: 'sticky', top: 0 }}>
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Full Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Year Level
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Course
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold" style={{ color: '#1D1D1F' }}>
-                      Payment Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getScholarsBySchool(selectedSchool)
-                    .filter(s => {
-                      if (!searchTerm) return true
-                      const fullName = formatScholarName(s, 'firstLast').toLowerCase()
-                      const course = (s.course || '').toLowerCase()
-                      return fullName.includes(searchTerm.toLowerCase()) || course.includes(searchTerm.toLowerCase())
-                    })
-                    .map((scholar, idx) => (
-                      <tr 
-                        key={idx} 
-                        className="border-t"
-                        style={{ borderColor: '#E5E5EA' }}
-                      >
-                        <td className="px-6 py-3 text-sm" style={{ color: '#1D1D1F' }}>
-                          {formatScholarName(scholar, 'full')}
-                        </td>
-                        <td className="px-6 py-3 text-sm" style={{ color: '#AAAAAA' }}>
-                          {scholar.yearLevel}
-                        </td>
-                        <td className="px-6 py-3 text-sm" style={{ color: '#AAAAAA' }}>
-                          {scholar.course || '-'}
-                        </td>
-                        <td className="px-6 py-3 text-center">
-                          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusBadge(scholar.status)}`}>
-                            {scholar.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t flex justify-end" style={{ borderColor: '#E5E5EA' }}>
-              <button
-                onClick={() => setViewModalOpen(false)}
-                className="px-4 py-2 rounded-lg font-medium transition-all"
-                style={{ 
-                  backgroundColor: '#007AFF',
-                  color: '#FFFFFF',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0051D5'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007AFF'}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Edit School Name Modal */}
-      {editModalOpen && selectedSchool && createPortal(
-        <div 
-          className="fixed z-[100]" 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100dvh',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditModalOpen(false)
-          }}
-        >
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: '#E5E5EA' }}>
-              <h3 className="text-xl font-semibold" style={{ color: '#1D1D1F' }}>
-                Edit School Name
-              </h3>
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="p-2 rounded-lg transition-all"
-                style={{ color: '#AAAAAA' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6">
-              <label className="block text-sm font-medium mb-2" style={{ color: '#1D1D1F' }}>
-                School / University name
-              </label>
-              <input
+          <div className="px-6 py-3 border-b border-border">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 w-4 h-4 text-brand" />
+              <Input
                 type="text"
-                value={editSchoolName}
-                onChange={(e) => {
-                  setEditSchoolName(e.target.value)
-                  setError('')
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveEdit()
-                }}
-                className="w-full px-4 py-2 rounded-lg border transition-all"
-                style={{
-                  borderColor: error ? '#FF3B30' : '#E5E5EA',
-                  color: '#1D1D1F',
-                }}
-                onFocus={(e) => {
-                  if (!error) e.currentTarget.style.borderColor = '#007AFF'
-                }}
-                onBlur={(e) => {
-                  if (!error) e.currentTarget.style.borderColor = '#E5E5EA'
-                }}
-                autoFocus
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name or course..."
+                className="pl-9"
               />
-              {error && (
-                <p className="text-xs mt-2" style={{ color: '#FF3B30' }}>
-                  {error}
-                </p>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t" style={{ borderColor: '#E5E5EA' }}>
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 rounded-lg font-medium transition-all"
-                style={{ color: '#1D1D1F' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={!editSchoolName.trim()}
-                className="px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: '#007AFF',
-                  color: '#FFFFFF',
-                }}
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = '#0051D5'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = '#007AFF'
-                  }
-                }}
-              >
-                Save
-              </button>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
 
-      {/* Undo Bar */}
-      {undoStack && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className="rounded-xl p-4 flex items-center gap-4 shadow-2xl" style={{ backgroundColor: '#D1FAE5', border: '2px solid #10b981' }}>
-            <span className="font-semibold" style={{ color: '#1D1D1F' }}>
-              Changes applied
-            </span>
-            <button
-              onClick={handleUndo}
-              className="px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow text-white"
-              style={{ backgroundColor: '#10b981' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+          <div className="flex-1 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Year Level</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead className="text-center">Payment Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedSchoolScholars
+                  .filter((s) => {
+                    if (!searchTerm) return true
+                    const fullName = formatScholarName(s, 'firstLast').toLowerCase()
+                    const course = (s.course || '').toLowerCase()
+                    return (
+                      fullName.includes(searchTerm.toLowerCase()) ||
+                      course.includes(searchTerm.toLowerCase())
+                    )
+                  })
+                  .map((scholar) => (
+                    <TableRow key={scholar.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {formatScholarName(scholar, 'full')}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {scholar.yearLevel}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {scholar.course || '-'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={
+                            scholar.status === 'Paid' ? 'success' : 'warning'
+                          }
+                        >
+                          {scholar.status || 'Processing'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50">
+            <Button variant="gradient" onClick={() => setViewModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit School Name Dialog */}
+      <Dialog
+        open={editModalOpen && !!selectedSchool}
+        onOpenChange={(open) => !open && setEditModalOpen(false)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit School Name</DialogTitle>
+            <DialogDescription>
+              Updates all active and graduated scholars enrolled at this school.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="edit-school-name">School / University Name</Label>
+            <Input
+              id="edit-school-name"
+              type="text"
+              value={editSchoolName}
+              onChange={(e) => {
+                setEditSchoolName(e.target.value)
+                setError('')
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveEdit()
+              }}
+              autoFocus
+              className={error ? 'border-red-500' : ''}
+            />
+            {error && <p className="text-xs text-red-600">{error}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="gradient"
+              onClick={handleSaveEdit}
+              disabled={!editSchoolName.trim()}
             >
-              Undo
-            </button>
-          </div>
-        </div>
-      )}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Advance Term Modal */}
       {advanceTermModalOpen && advanceTermSchool && (
         <AdvanceTermModal
           isOpen={advanceTermModalOpen}
@@ -541,7 +433,9 @@ const SchoolsTab = () => {
             setAdvanceTermSchool(null)
           }}
           school={advanceTermSchool}
-          scholars={allActiveScholars.filter(s => s.school === advanceTermSchool)}
+          scholars={allActiveScholars.filter(
+            (s) => s.school === advanceTermSchool
+          )}
           onApply={handleApplyAdvanceTerm}
         />
       )}

@@ -1,220 +1,150 @@
-import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useMemo } from 'react'
+import { Check, School as SchoolIcon, Plus } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 
-/**
- * SchoolAutocomplete Component
- * 
- * A reusable autocomplete input for school selection with proper styling
- * and visibility across all states (focus, open, typing, autofill).
- * 
- * ROOT CAUSE OF WHITE FIELD ISSUE:
- * The dropdown list was being clipped by the modal's overflow:hidden,
- * and the highlighting logic used nested React elements that sometimes
- * rendered as strings, making text invisible against a white background.
- * 
- * FIXES APPLIED:
- * 1. Portal rendering to escape modal clipping
- * 2. Explicit colors for all states (input, dropdown, options)
- * 3. High z-index (9999) to stay above modal
- * 4. color-scheme: light to prevent dark mode autofill styles
- * 5. Proper text highlighting with dangerouslySetInnerHTML
- * 6. Position calculation that updates on scroll
- */
+const HighlightText = ({ text, search }) => {
+  if (!search) return <>{text}</>
+  const words = search.toLowerCase().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return <>{text}</>
+
+  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const splitRegex = new RegExp(`(${escaped.join('|')})`, 'gi')
+  const matchRegex = new RegExp(`^(${escaped.join('|')})$`, 'i')
+  const parts = String(text).split(splitRegex)
+
+  return (
+    <>
+      {parts.map((part, idx) =>
+        matchRegex.test(part) ? (
+          <strong key={idx} className="font-bold text-brand">
+            {part}
+          </strong>
+        ) : (
+          <span key={idx}>{part}</span>
+        )
+      )}
+    </>
+  )
+}
+
 const SchoolAutocomplete = ({
   value,
   onChange,
   onSelect,
-  existingSchools,
+  existingSchools = [],
   isEditMode = false,
   required = true,
-  placeholder = "Type school name or select from existing...",
-  className = "",
+  placeholder = 'Type school name or select from existing...',
+  className = '',
 }) => {
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [filteredSchools, setFilteredSchools] = useState([])
-  const [dropdownPosition, setDropdownPosition] = useState(null)
-  
-  const inputRef = useRef(null)
-  const dropdownRef = useRef(null)
+  const [open, setOpen] = useState(false)
 
-  // Filter schools based on search value
-  useEffect(() => {
-    if (value) {
-      const searchWords = value.toLowerCase().split(/\s+/).filter(Boolean)
-      const filtered = existingSchools.filter(school => {
-        const schoolLower = school.toLowerCase()
-        return searchWords.every(word => schoolLower.includes(word))
-      })
-      setFilteredSchools(filtered)
-    } else {
-      setFilteredSchools(existingSchools)
-    }
+  const filteredSchools = useMemo(() => {
+    if (!value) return existingSchools
+    const searchWords = value.toLowerCase().split(/\s+/).filter(Boolean)
+    return existingSchools.filter((school) => {
+      const lower = school.toLowerCase()
+      return searchWords.every((word) => lower.includes(word))
+    })
   }, [value, existingSchools])
 
-  // Calculate dropdown position
-  const updateDropdownPosition = () => {
-    if (inputRef.current && showDropdown) {
-      const rect = inputRef.current.getBoundingClientRect()
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      })
-    }
-  }
-
-  useEffect(() => {
-    updateDropdownPosition()
-    
-    if (showDropdown) {
-      // Update position on scroll
-      const handleScroll = () => updateDropdownPosition()
-      window.addEventListener('scroll', handleScroll, true)
-      return () => window.removeEventListener('scroll', handleScroll, true)
-    }
-  }, [showDropdown])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        inputRef.current && !inputRef.current.contains(e.target) &&
-        dropdownRef.current && !dropdownRef.current.contains(e.target)
-      ) {
-        setShowDropdown(false)
-      }
-    }
-
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showDropdown])
-
   const handleInputChange = (e) => {
-    const newValue = e.target.value
-    onChange(newValue)
-    setShowDropdown(true)
-  }
-
-  const handleInputFocus = () => {
-    setShowDropdown(true)
-    updateDropdownPosition()
+    onChange(e.target.value)
+    setOpen(true)
   }
 
   const handleSchoolSelect = (school) => {
     onSelect(school)
-    setShowDropdown(false)
+    setOpen(false)
   }
 
   const handleCreateNewSchool = () => {
-    const normalizedName = value.trim().replace(/\s+/g, ' ')
+    const normalizedName = (value || '').trim().replace(/\s+/g, ' ')
     if (normalizedName) {
       onSelect(normalizedName)
-      setShowDropdown(false)
+      setOpen(false)
     }
   }
 
-  // Highlight matching text
-  const highlightMatch = (text, search) => {
-    if (!search) return text
-
-    const searchWords = search.toLowerCase().split(/\s+/).filter(Boolean)
-    let highlightedText = text
-
-    searchWords.forEach(word => {
-      const regex = new RegExp(`(${word})`, 'gi')
-      highlightedText = highlightedText.replace(regex, '<strong>$1</strong>')
-    })
-
-    return highlightedText
-  }
-
   return (
-    <div className={`relative ${className}`}>
-      <input
-        ref={inputRef}
-        type="text"
-        name="school"
-        value={value}
-        onChange={handleInputChange}
-        onFocus={handleInputFocus}
-        required={required}
-        placeholder={placeholder}
-        autoComplete="off"
-        className="w-full px-3 py-2 rounded-lg text-sm"
-        style={{
-          border: '1px solid #E5E5EA',
-          backgroundColor: '#FFFFFF',
-          color: '#1D1D1F',
-          colorScheme: 'light',
-        }}
-      />
-
-      {/* Dropdown Portal */}
-      {showDropdown && dropdownPosition && createPortal(
-        <div
-          ref={dropdownRef}
-          className="bg-white rounded-lg shadow-lg overflow-hidden"
-          style={{
-            position: 'absolute',
-            top: `${dropdownPosition.top + 4}px`,
-            left: `${dropdownPosition.left}px`,
-            width: `${dropdownPosition.width}px`,
-            maxHeight: '240px',
-            overflowY: 'auto',
-            border: '1px solid #E5E5EA',
-            zIndex: 9999,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          }}
-        >
-          {filteredSchools.length > 0 ? (
-            filteredSchools.map((school, index) => (
-              <div
-                key={index}
-                onClick={() => handleSchoolSelect(school)}
-                className="px-3 py-2 cursor-pointer text-sm border-b last:border-b-0 transition-colors"
-                style={{
-                  color: '#1D1D1F',
-                  backgroundColor: '#FFFFFF',
-                  borderColor: '#E5E5EA',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F5F5F7'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF'
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: highlightMatch(school, value)
-                }}
-              />
-            ))
-          ) : value ? (
-            <div className="px-3 py-2">
-              {!isEditMode ? (
-                <div
-                  onClick={handleCreateNewSchool}
-                  className="cursor-pointer"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <div className={cn('relative', className)}>
+          <Input
+            type="text"
+            name="school"
+            value={value}
+            onChange={handleInputChange}
+            onFocus={() => setOpen(true)}
+            required={required}
+            placeholder={placeholder}
+            autoComplete="off"
+          />
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-[var(--radix-popover-trigger-width)] p-1.5 max-h-60 overflow-y-auto z-[150]"
+      >
+        {filteredSchools.length > 0 ? (
+          <div className="space-y-0.5">
+            {filteredSchools.map((school) => {
+              const isSelected = value === school
+              return (
+                <button
+                  key={school}
+                  type="button"
+                  onClick={() => handleSchoolSelect(school)}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-colors hover:bg-accent',
+                    isSelected && 'bg-brand/15 font-semibold text-foreground'
+                  )}
                 >
-                  <p className="text-xs font-medium" style={{ color: '#007AFF' }}>
-                    Use "{value.trim().replace(/\s+/g, ' ')}" as a new school
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: '#AAAAAA' }}>
-                    This will be added to the system
-                  </p>
-                </div>
-              ) : (
-                <p className="text-xs" style={{ color: '#AAAAAA' }}>
-                  No matching schools found. Please select from existing schools.
+                  <span className="flex items-center gap-2 truncate">
+                    <SchoolIcon className="w-3.5 h-3.5 text-brand flex-shrink-0" />
+                    <span className="truncate">
+                      <HighlightText text={school} search={value} />
+                    </span>
+                  </span>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-brand flex-shrink-0" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ) : value ? (
+          <div className="p-2">
+            {!isEditMode ? (
+              <button
+                type="button"
+                onClick={handleCreateNewSchool}
+                className="w-full text-left p-2 rounded-lg hover:bg-accent/70 transition-colors"
+              >
+                <p className="text-xs font-semibold text-brand flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" />
+                  Use &ldquo;{value.trim().replace(/\s+/g, ' ')}&rdquo; as a new school
                 </p>
-              )}
-            </div>
-          ) : null}
-        </div>,
-        document.body
-      )}
-    </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  This school will be registered automatically
+                </p>
+              </button>
+            ) : (
+              <p className="text-xs text-muted-foreground px-1">
+                No matching schools found.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground p-2">
+            Start typing a school name...
+          </p>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }
 

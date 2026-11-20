@@ -1,6 +1,5 @@
-// Custom Peso Icon Component
-// This matches the lucide-react icon style (24x24 viewBox, stroke currentColor)
-const PesoIcon = ({ className = "w-6 h-6", strokeWidth = 2 }) => {
+// Custom Peso Icon Component matching lucide-react style (24x24 viewBox, centered)
+const PesoIcon = ({ className = 'w-6 h-6', strokeWidth = 2 }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -14,11 +13,9 @@ const PesoIcon = ({ className = "w-6 h-6", strokeWidth = 2 }) => {
       strokeLinejoin="round"
       className={className}
     >
-      {/* P symbol with double horizontal lines (Peso sign) */}
-      <path d="M6 4v16" />
-      <path d="M6 8h6a3 3 0 0 0 0-6H6" />
-      <line x1="4" y1="10" x2="10" y2="10" />
-      <line x1="4" y1="14" x2="10" y2="14" />
+      <path d="M8 13h4a4.5 4.5 0 0 0 0-9H8v16" />
+      <path d="M5.5 7h13" />
+      <path d="M5.5 10h13" />
     </svg>
   )
 }

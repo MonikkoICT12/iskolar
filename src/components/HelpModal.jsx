@@ -1,137 +1,133 @@
-import { X, Book, Rocket, Code, Cloud } from 'lucide-react'
+import { Book, Database, FileSpreadsheet, BarChart3, ShieldCheck, X } from 'lucide-react'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
-const HelpModal = ({ onClose }) => {
+const HelpModal = ({ isOpen = true, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-lgu-navy text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Book className="w-6 h-6" />
-            How to Use the Scholar System?
-          </h2>
-          <button onClick={onClose} className="text-white hover:text-amber-300 transition">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        hideClose
+        className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 overflow-x-hidden border-0 gap-0"
+      >
+        <DialogHeader className="sticky top-0 z-10 gradient-emerald-gold text-white px-6 py-5 flex-row items-start justify-between gap-4 space-y-0">
+          <div className="space-y-1.5">
+            <DialogTitle className="text-white text-xl flex items-center gap-2.5">
+              <Book className="w-5 h-5" />
+              <span>IskoLayan System Guide</span>
+            </DialogTitle>
+            <DialogDescription className="text-white/90 text-xs">
+              Quick overview for managing scholars, partner schools, graduates, and reports.
+            </DialogDescription>
+          </div>
+          <DialogClose asChild>
+            <button
+              type="button"
+              aria-label="Close guide"
+              className="rounded-lg p-1.5 text-white/85 hover:text-white hover:bg-white/15 transition-colors flex-shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </DialogClose>
+        </DialogHeader>
 
-        {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Quick Start */}
           <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-3">Quick Start Guide</h3>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground mb-3">
+              Quick Start Workflow
+            </h3>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/85">
               <li>
-                <strong>Add Scholar:</strong> Click the green "Add Scholar" button in the top right
+                <strong>Add Scholar:</strong> Click <strong>Add Scholar</strong> in the top header to encode a new scholar and GWA/percentage grades.
               </li>
               <li>
-                <strong>View Records:</strong> Navigate using the tabs (Dashboard, Scholar Records,
-                etc.)
+                <strong>Filter & Sort Records:</strong> Open the <strong>Scholars</strong> tab to filter by barangay, school, year level, semester, payment status, PWD, Solo Parent, or gender.
               </li>
               <li>
-                <strong>Search & Filter:</strong> Use the search bar and filter dropdowns in Scholar
-                Records
+                <strong>Bulk Actions:</strong> Select multiple scholars to mark them as <strong>Paid</strong>, <strong>Processing</strong>, or <strong>Graduated</strong> in one click.
               </li>
               <li>
-                <strong>Edit/Delete:</strong> Click the edit or delete icons on any scholar record
+                <strong>Advance Term:</strong> In <strong>Schools</strong>, click the calendar action to promote year levels or move scholars to the next semester.
               </li>
               <li>
-                <strong>Backup Data:</strong> Go to "Backup & Reports" to export your data
+                <strong>Export & Import:</strong> Use the <strong>Reports</strong> tab for Excel/CSV backups, printable reports, and bulk spreadsheet imports.
               </li>
             </ol>
           </div>
 
-          {/* Features */}
           <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-3">Key Features</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                <h4 className="font-semibold text-sm text-indigo-900 mb-1">Auto-Save</h4>
-                <p className="text-xs text-slate-600">
-                  All data is automatically saved to your browser's local storage
-                </p>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                <h4 className="font-semibold text-sm text-emerald-900 mb-1">Export/Import</h4>
-                <p className="text-xs text-slate-600">
-                  Backup your data to JSON files for safety and portability
-                </p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <h4 className="font-semibold text-sm text-purple-900 mb-1">Print Reports</h4>
-                <p className="text-xs text-slate-600">
-                  Generate printable official reports with proper formatting
-                </p>
-              </div>
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <h4 className="font-semibold text-sm text-amber-900 mb-1">Analytics</h4>
-                <p className="text-xs text-slate-600">
-                  View summaries by school, year level, and barangay
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Deployment Guide */}
-          <div className="bg-gradient-to-r from-lgu-navy to-lgu-blue text-white p-5 rounded-xl">
-            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-              <Rocket className="w-5 h-5" />
-              Deploy Online (Free Forever!)
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground mb-3">
+              System Capabilities
             </h3>
-            <p className="text-sm mb-4 text-slate-200">
-              Turn this into a real website accessible by multiple staff members:
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Card className="bg-muted/80 border-border">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <Database className="w-5 h-5 text-brand mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-sm text-foreground">Supabase Cloud Sync</h4>
+                      <Badge variant="success">Live</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Every create, edit, bulk status change, and graduation action persists directly to Supabase.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div className="space-y-4">
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <h4 className="font-bold text-sm text-amber-300 mb-2 flex items-center gap-2">
-                  <Cloud className="w-4 h-4" />
-                  Option 1: Netlify (Easiest)
-                </h4>
-                <ol className="text-xs space-y-1 list-decimal list-inside text-slate-200">
-                  <li>Sign up at netlify.com (free)</li>
-                  <li>Drag and drop your build folder</li>
-                  <li>Get instant website link (yoursite.netlify.app)</li>
-                </ol>
-              </div>
+              <Card className="bg-brand-soft/25 border-border">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <FileSpreadsheet className="w-5 h-5 text-foreground mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-sm text-foreground mb-1">Excel & CSV Import/Export</h4>
+                    <p className="text-xs text-foreground/80">
+                      Export filtered school-year lists or upload spreadsheets with automatic duplicate detection.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <h4 className="font-bold text-sm text-amber-300 mb-2 flex items-center gap-2">
-                  <Code className="w-4 h-4" />
-                  Option 2: GitHub Pages
-                </h4>
-                <ol className="text-xs space-y-1 list-decimal list-inside text-slate-200">
-                  <li>Upload your code to GitHub</li>
-                  <li>Enable GitHub Pages in settings</li>
-                  <li>Access at username.github.io/iskolar</li>
-                </ol>
-              </div>
+              <Card className="bg-muted/80 border-border">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <BarChart3 className="w-5 h-5 text-brand mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-sm text-foreground mb-1">Dual Grading Support</h4>
+                    <p className="text-xs text-foreground/80">
+                      Supports both 1.00–5.00 GWA and 50–100% grading scales across multi-term history.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <h4 className="font-bold text-sm text-amber-300 mb-2">
-                  Option 3: Vercel (Professional)
-                </h4>
-                <ol className="text-xs space-y-1 list-decimal list-inside text-slate-200">
-                  <li>Sign up at vercel.com</li>
-                  <li>Import from GitHub</li>
-                  <li>Auto-deploy on every update</li>
-                </ol>
-              </div>
+              <Card className="bg-brand-soft/25 border-border">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-brand mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-sm text-foreground mb-1">Role-Protected Admin</h4>
+                    <p className="text-xs text-foreground/80">
+                      Individual scholar records remain private behind Supabase Auth while public statistics stay aggregate-only.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
-          {/* Contact */}
-          <div className="text-center pt-4 border-t">
-            <p className="text-xs text-slate-500">
-              Built with React.js • Powered by Vite • Styled with Tailwind CSS
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              Palayan City LGU Scholarship Management System
+          <div className="text-center pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground font-medium">
+              IskoLayan: Palayan City Scholarship Management System
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

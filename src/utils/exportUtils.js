@@ -27,29 +27,47 @@ function getLatestGWA(grades) {
 }
 
 /**
+ * Neutralize CSV/Excel spreadsheet formula injection prefixes (=, +, -, @, \t, \r)
+ * on string cells while leaving numeric primitives untouched.
+ * @param {any} value
+ * @returns {any}
+ */
+function sanitizeSpreadsheetCell(value) {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  const str = String(value)
+  if (/^[\s\t\r]*[=+\-@]/.test(str) || /^[\t\r]/.test(str)) {
+    return `'${str}`
+  }
+  return str
+}
+
+/**
  * Convert scholar object to export row
  * @param {object} scholar - Scholar object
  * @returns {object} Row object with export columns
  */
 function scholarToRow(scholar) {
   return {
-    'Last Name': scholar.lastName || '',
-    'First Name': scholar.firstName || '',
-    'Middle Name': scholar.middleName || '',
-    'Suffix': (scholar.suffix && scholar.suffix !== 'None') ? scholar.suffix : '',
-    'Gender': scholar.gender || 'Male',
-    'Barangay': scholar.barangay || '',
-    'School / University': scholar.school || '',
-    'Course': scholar.course || '',
-    'Year Level': scholar.yearLevel || '',
-    'Semester': scholar.semester || '',
+    'Last Name': sanitizeSpreadsheetCell(scholar.lastName || ''),
+    'First Name': sanitizeSpreadsheetCell(scholar.firstName || ''),
+    'Middle Name': sanitizeSpreadsheetCell(scholar.middleName || ''),
+    'Suffix': sanitizeSpreadsheetCell(
+      scholar.suffix && scholar.suffix !== 'None' ? scholar.suffix : ''
+    ),
+    'Gender': sanitizeSpreadsheetCell(scholar.gender || 'Male'),
+    'Barangay': sanitizeSpreadsheetCell(scholar.barangay || ''),
+    'School / University': sanitizeSpreadsheetCell(scholar.school || ''),
+    'Course': sanitizeSpreadsheetCell(scholar.course || ''),
+    'Year Level': sanitizeSpreadsheetCell(scholar.yearLevel || ''),
+    'Semester': sanitizeSpreadsheetCell(scholar.semester || ''),
     'PWD': scholar.is_pwd ? 'Yes' : 'No',
     'Solo Parent': scholar.is_solo_parent ? 'Yes' : 'No',
     'Scholarship Amount': scholar.scholarship_amount || scholar.amount || 0,
-    'Latest GWA': getLatestGWA(scholar.grades),
-    'Payment Status': scholar.status || 'Processing',
-    'Status': scholar.scholarStatus || 'Active',
-    'Year Graduated': scholar.yearGraduated || ''
+    'Latest GWA': sanitizeSpreadsheetCell(getLatestGWA(scholar.grades)),
+    'Payment Status': sanitizeSpreadsheetCell(scholar.status || 'Processing'),
+    'Status': sanitizeSpreadsheetCell(scholar.scholarStatus || 'Active'),
+    'Year Graduated': sanitizeSpreadsheetCell(scholar.yearGraduated || ''),
   }
 }
 
@@ -71,11 +89,16 @@ export function exportToCSV(scholars) {
   // Get headers from first row
   const headers = Object.keys(rows[0])
   
-  // Helper to escape CSV values
+  // Helper to escape and formula-sanitize CSV values
   const escapeCSV = (value) => {
-    const str = String(value)
-    // Quote if contains comma, newline, or quote
-    if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+    const str = String(sanitizeSpreadsheetCell(value))
+    // Quote if contains comma, newline, carriage return, or quote
+    if (
+      str.includes(',') ||
+      str.includes('\n') ||
+      str.includes('\r') ||
+      str.includes('"')
+    ) {
       return `"${str.replace(/"/g, '""')}"`
     }
     return str
@@ -181,8 +204,13 @@ export function generateTemplate(format = 'excel') {
     // Generate CSV template
     const headers = Object.keys(exampleRow)
     const escapeCSV = (value) => {
-      const str = String(value)
-      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+      const str = String(sanitizeSpreadsheetCell(value))
+      if (
+        str.includes(',') ||
+        str.includes('\n') ||
+        str.includes('\r') ||
+        str.includes('"')
+      ) {
         return `"${str.replace(/"/g, '""')}"`
       }
       return str

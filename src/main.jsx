@@ -3,7 +3,10 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import App from './App.jsx'
+import { initProductionInspectGuard } from './utils/prodGuard.js'
 import './index.css'
+
+initProductionInspectGuard()
 
 // Global error handlers
 window.addEventListener('error', (event) => {

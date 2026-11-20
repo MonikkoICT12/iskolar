@@ -103,6 +103,28 @@
     @apply transition-[transform,background-color,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:bg-white/95 hover:border-brand/40 hover:shadow-[0_14px_36px_rgba(88,117,41,0.13)];
   }
 
+  .glass-frosted-card {
+    background-color: rgba(255, 255, 255, 0.56);
+    backdrop-filter: blur(22px) saturate(145%);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+    border-color: rgba(255, 255, 255, 0.82);
+    box-shadow:
+      0 12px 36px rgba(88, 117, 41, 0.11),
+      inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    transition:
+      background-color 300ms ease,
+      border-color 300ms ease,
+      box-shadow 300ms ease;
+  }
+
+  .glass-frosted-card:hover {
+    background-color: rgba(255, 255, 255, 0.72);
+    border-color: rgba(113, 149, 30, 0.42);
+    box-shadow:
+      0 18px 46px rgba(88, 117, 41, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  }
+
   .glass-header {
     @apply bg-white/85 backdrop-blur-xl border-b border-border/85 shadow-[0_4px_20px_rgba(88,117,41,0.06)];
   }
@@ -310,6 +332,47 @@ body::-webkit-scrollbar {
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+@keyframes bg-wave-flow {
+  0% {
+    transform: translate3d(0, 0, 0) scaleY(1);
+  }
+  50% {
+    transform: translate3d(-25%, 16px, 0) scaleY(1.06);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0) scaleY(1);
+  }
+}
+
+@keyframes bg-wave-flow-reverse {
+  0% {
+    transform: translate3d(-50%, 0, 0) scaleY(1.04);
+  }
+  50% {
+    transform: translate3d(-25%, -16px, 0) scaleY(0.96);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scaleY(1.04);
+  }
+}
+
+.animate-wave-slow {
+  animation: bg-wave-flow 26s linear infinite;
+  will-change: transform;
+}
+
+.animate-wave-reverse {
+  animation: bg-wave-flow-reverse 34s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-wave-slow,
+  .animate-wave-reverse {
+    animation: none;
   }
 }
 

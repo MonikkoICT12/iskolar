@@ -10,6 +10,7 @@ import {
   Heart,
   UserCheck,
   LayoutDashboard,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -26,7 +27,6 @@ import dataService from "../services/dataService";
 import { useAuth } from "../contexts/AuthContext";
 import { safePercentage } from "../utils/helpers";
 import AdminLoginDialog from "./AdminLoginDialog";
-import { LandingPageSkeleton } from "./SkeletonScreens";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,12 +59,22 @@ const SplitWords = ({
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const rootRef = useRef(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [graduatesData, setGraduatesData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [headerSolid, setHeaderSolid] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setHeaderSolid(window.scrollY > Math.max(360, window.innerHeight * 0.65));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const fetchPublicData = async () => {
@@ -86,7 +96,7 @@ const LandingPage = () => {
   }, []);
 
   const handleDashboardClick = () => {
-    if (user) {
+    if (user && isAdmin) {
       navigate("/admin");
     } else {
       setLoginPromptOpen(true);
@@ -130,9 +140,9 @@ const LandingPage = () => {
     },
   };
 
-  // Hero entrance choreography runs synchronously before paint so the hero never flashes visible first
+  // Hero entrance choreography runs immediately on mount before first paint
   useLayoutEffect(() => {
-    if (loading || !rootRef.current) return undefined;
+    if (!rootRef.current) return undefined;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return undefined;
     }
@@ -140,7 +150,7 @@ const LandingPage = () => {
     const ctx = gsap.context(() => {
       const heroTl = gsap.timeline({
         defaults: {
-          ease: 'power2.out',
+          ease: "power2.out",
           force3D: true,
           clearProps: "transform,opacity,filter",
         },
@@ -148,64 +158,71 @@ const LandingPage = () => {
 
       heroTl
         .fromTo(
-          '.gsap-nav-header',
-          { yPercent: -100, opacity: 0 },
-          { yPercent: 0, opacity: 1, duration: 0.95, ease: 'expo.out' }
+          ".gsap-nav-header",
+          { y: -28, opacity: 0 },
+          { y: 0, opacity: 1, duration: 1.45, ease: "power3.out" },
+          0,
         )
         .fromTo(
-          '.gsap-nav-item',
-          { y: -14, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.75, stagger: 0.09, ease: 'power2.out' },
-          0.25
+          ".gsap-hero-bg-img",
+          { scale: 1.075, y: 10 },
+          {
+            scale: 1,
+            y: 0,
+            duration: 2.4,
+            ease: "power2.out",
+            clearProps: "transform",
+          },
+          0,
         )
         .fromTo(
-          '.gsap-hero-logo',
-          { scale: 0.92, opacity: 0, y: 20 },
-          { scale: 1, opacity: 1, y: 0, duration: 1.05, ease: 'power2.out' },
-          0.18
+          ".gsap-hero-watermark",
+          { y: 32, opacity: 0 },
+          { y: 0, opacity: 1, duration: 1.75, ease: "power3.out" },
+          0,
         )
         .fromTo(
-          '.gsap-hero-word',
-          { yPercent: 55, opacity: 0 },
+          ".gsap-hero-badge",
+          { y: 18, opacity: 0 },
+          { y: 0, opacity: 1, duration: 1.55, ease: "power3.out" },
+          0,
+        )
+        .fromTo(
+          ".gsap-hero-word",
+          { yPercent: 85, opacity: 0 },
           {
             yPercent: 0,
             opacity: 1,
-            duration: 1.05,
-            stagger: 0.06,
-            ease: 'power2.out',
+            duration: 1.55,
+            stagger: 0.035,
+            ease: "power3.out",
           },
-          0.32
+          0,
         )
         .fromTo(
-          '.gsap-hero-subtitle',
-          { y: 18, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.95, ease: 'power2.out' },
-          0.62
-        )
-        .fromTo(
-          '.gsap-hero-cta',
-          { y: 16, opacity: 0, scale: 0.98 },
-          { y: 0, opacity: 1, scale: 1, duration: 0.85, ease: 'power2.out' },
-          0.82
-        )
-        .fromTo(
-          '.gsap-hero-pillar',
+          ".gsap-hero-subtitle",
           { y: 26, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.95, stagger: 0.14, ease: 'power2.out' },
-          0.95
+          { y: 0, opacity: 1, duration: 1.65, ease: "power3.out" },
+          0,
         )
         .fromTo(
-          '.gsap-hero-compliance',
-          { y: 18, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.9, ease: 'power2.out' },
-          1.22
+          ".gsap-hero-cta",
+          { y: 24, scale: 0.94, opacity: 0 },
+          { y: 0, scale: 1, opacity: 1, duration: 1.6, ease: "power3.out" },
+          0,
         )
-    }, rootRef)
+        .fromTo(
+          ".gsap-hero-compliance",
+          { y: 26, scale: 0.95, opacity: 0 },
+          { y: 0, scale: 1, opacity: 1, duration: 1.65, ease: "power3.out" },
+          0,
+        );
+    }, rootRef);
 
     return () => {
       ctx.revert();
     };
-  }, [loading]);
+  }, []);
 
   useLayoutEffect(() => {
     if (loading || !rootRef.current) return undefined;
@@ -216,6 +233,22 @@ const LandingPage = () => {
     const observers = [];
 
     const ctx = gsap.context(() => {
+      if (rootRef.current?.querySelector(".gsap-hero-float-card")) {
+        gsap.fromTo(
+          ".gsap-hero-float-card",
+          { y: 28, scale: 0.94, opacity: 0 },
+          {
+            y: 0,
+            scale: 1,
+            opacity: 1,
+            duration: 1.55,
+            ease: "power3.out",
+            force3D: true,
+            clearProps: "transform,opacity",
+          },
+        );
+      }
+
       // Reliable IntersectionObserver helper (never leaves scrolled/resized elements stuck invisible)
       const revealGroup = (
         triggerSelector,
@@ -500,42 +533,67 @@ const LandingPage = () => {
     };
   }, [loading, dashboardData, graduatesData]);
 
-  if (loading) {
-    return <LandingPageSkeleton />;
-  }
-
   const dataNotAvailable =
-    !dashboardData?.available || !graduatesData?.available;
+    !loading && (!dashboardData?.available || !graduatesData?.available);
 
   return (
     <div
       ref={rootRef}
       className="bg-frosted-canvas min-h-screen flex flex-col w-full"
     >
-      {/* Frosted Top Navigation */}
-      <header className="gsap-nav-header glass-header sticky top-0 z-40 w-full">
+      {/* Blended Transparent Top Navigation (transitions to frosted glass after hero scroll) */}
+      <header
+        className={`gsap-nav-header fixed top-0 inset-x-0 z-40 w-full transition-[background-color,border-color,box-shadow] duration-300 ${
+          headerSolid
+            ? "glass-header shadow-sm"
+            : "bg-transparent border-b border-transparent"
+        }`}
+      >
         <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between gap-4">
-          <div className="gsap-nav-item flex items-center gap-3 min-w-0 w-full justify-self-start">
+          <div className="gsap-nav-item flex items-center gap-3 min-w-0 justify-self-start">
             <img
               src="/logo/iskolayan-square-light.png"
               alt="IskoLayan Logo"
-              className="w-10 h-10 rounded-xl object-contain flex-shrink-0 shadow-sm"
+              className="w-9 h-9 rounded-xl object-contain flex-shrink-0 shadow-sm"
             />
             <div className="min-w-0">
-              <span className="font-extrabold text-sm text-foreground block leading-tight truncate">
+              <span
+                className={`font-extrabold text-sm block leading-tight truncate transition-colors duration-300 ${
+                  headerSolid
+                    ? "text-foreground"
+                    : "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                }`}
+              >
                 IskoLayan
               </span>
-              <span className="text-[11px] text-muted-foreground font-medium block truncate">
-                Palayan City Scholarship Management System
+              <span
+                className={`text-[11px] font-medium block truncate transition-colors duration-300 ${
+                  headerSolid
+                    ? "text-muted-foreground"
+                    : "text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                }`}
+              >
+                Palayan City Scholarship System
               </span>
             </div>
           </div>
 
-          <nav className="gsap-nav-item hidden md:flex items-center justify-center gap-1 justify-self-center">
+          <nav
+            className={`gsap-nav-item hidden md:flex items-center justify-center gap-1 rounded-full px-2 py-1 justify-self-center transition-[background-color,border-color,box-shadow] duration-300 ${
+              headerSolid
+                ? "bg-white/85 border border-border/90 shadow-sm"
+                : "bg-white/15 backdrop-blur-md border border-white/25 shadow-sm"
+            }`}
+          >
             <Button
               variant="ghost"
               size="sm"
               onClick={() => scrollToSection("overview")}
+              className={`rounded-full h-8 px-4 text-xs font-semibold transition-colors ${
+                headerSolid
+                  ? "text-foreground hover:bg-brand/10 hover:text-brand"
+                  : "text-white hover:bg-white/20 hover:text-white"
+              }`}
             >
               Overview
             </Button>
@@ -543,6 +601,11 @@ const LandingPage = () => {
               variant="ghost"
               size="sm"
               onClick={() => scrollToSection("statistics")}
+              className={`rounded-full h-8 px-4 text-xs font-semibold transition-colors ${
+                headerSolid
+                  ? "text-muted-foreground hover:bg-brand/10 hover:text-brand"
+                  : "text-white/90 hover:bg-white/20 hover:text-white"
+              }`}
             >
               Public Statistics
             </Button>
@@ -550,6 +613,11 @@ const LandingPage = () => {
               variant="ghost"
               size="sm"
               onClick={() => scrollToSection("graduates")}
+              className={`rounded-full h-8 px-4 text-xs font-semibold transition-colors ${
+                headerSolid
+                  ? "text-muted-foreground hover:bg-brand/10 hover:text-brand"
+                  : "text-white/90 hover:bg-white/20 hover:text-white"
+              }`}
             >
               Graduates
             </Button>
@@ -559,144 +627,259 @@ const LandingPage = () => {
             variant="default"
             size="sm"
             onClick={handleDashboardClick}
-            className="gsap-nav-item rounded-xl px-4 flex-shrink-0 justify-self-end"
+            className={`gsap-nav-item rounded-full px-4 h-9 flex-shrink-0 justify-self-end shadow-sm transition-[background-color,border-color,box-shadow] duration-300 ${
+              headerSolid ? "" : "border border-white/20 shadow-md"
+            }`}
           >
-            <LayoutDashboard className="w-4 h-4" />
+            <LayoutDashboard className="w-3.5 h-3.5" />
             <span>Dashboard</span>
           </Button>
         </div>
       </header>
 
-      {/* Landing Hero Section with Palayan City Seal */}
+      {/* Minimalist Architectural City Hall Hero Section (Full-Bleed Whole Canvas) */}
       <section
         id="overview"
-        className="relative overflow-hidden border-b border-border/80"
+        className="relative w-full border-b border-border/70"
       >
-        <div className="w-80 h-80 rounded-full bg-brand/20 blur-[120px] absolute -top-12 left-8 pointer-events-none animate-float-slow" />
-        <div className="w-80 h-80 rounded-full bg-highlight/25 blur-[120px] absolute -bottom-16 right-8 pointer-events-none animate-float-slow" />
+        <div className="gsap-hero-frame relative w-full min-h-[680px] sm:min-h-[780px] lg:min-h-screen max-h-[1160px] overflow-hidden flex flex-col justify-between bg-[#1A2110]">
+          {/* Palayan City Hall Softly Blurred Full-Bleed Backdrop (-inset-3 prevents blur edge fringing) */}
+          <img
+            src="/cityhall.jpg"
+            alt="Palayan City Hall"
+            loading="eager"
+            decoding="sync"
+            fetchPriority="high"
+            className="gsap-hero-bg-img absolute -inset-3 w-[calc(100%+1.5rem)] h-[calc(100%+1.5rem)] max-w-none object-cover object-[50%_36%] blur-[3.5px]"
+          />
 
-        <div className="relative w-full px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
-          <div className="max-w-5xl mx-auto text-center">
-            {/* IskoLayan Logo */}
-            <div className="gsap-hero-logo flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute -inset-2 rounded-3xl bg-gradient-to-tr from-[#587529]/30 via-[#EDDA5E]/35 to-[#F4BE38]/35 blur-lg" />
-                <img
-                  src="/logo/iskolayan-square-light.png"
-                  alt="IskoLayan Official Logo"
-                  className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-contain shadow-xl shadow-[#587529]/15 transition-transform duration-300 hover:scale-105"
+          {/* Soft Top Header Gradient Blend */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-44 sm:h-56 bg-gradient-to-b from-[#161D0D]/30 via-[#161D0D]/10 to-transparent z-[1]"
+          />
+
+          {/* Subtle Sky Editorial Watermark */}
+          <div className="gsap-hero-watermark pointer-events-none select-none absolute top-20 sm:top-24 inset-x-0 text-center overflow-hidden z-[2]">
+            <span className="block font-black uppercase tracking-[0.1em] text-[clamp(3.25rem,11vw,9.25rem)] leading-none text-white/25">
+              IskoLayan
+            </span>
+          </div>
+
+          {/* Olive-Charcoal Architectural Contrast Scrim (keeps City Hall & flag bright in center/top) */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#161D0D]/90 via-[#161D0D]/30 to-transparent z-[3]" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#161D0D]/70 via-[#161D0D]/15 to-transparent z-[3]" />
+
+          {/* Top Minimal Location Pill */}
+          <div className="relative z-10 px-5 sm:px-8 lg:px-12 pt-24 sm:pt-28 flex items-center justify-between">
+            <div className="gsap-hero-badge inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#1A2110]/35 backdrop-blur-md border border-white/30 text-white shadow-sm">
+              <img
+                src="/logo/iskolayan-square-light.png"
+                alt="IskoLayan Official Mark"
+                className="w-5 h-5 rounded-md object-contain"
+              />
+              <span className="text-[11px] sm:text-xs font-medium tracking-wide">
+                City Government of Palayan · Nueva Ecija
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Split Editorial Headline + Centered Compliance Pill + Right Live Metric Pill */}
+          <div className="relative z-10 px-6 sm:px-10 lg:px-12 pb-8 sm:pb-10 pt-16 flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end gap-5 sm:gap-6">
+            <div className="max-w-lg lg:justify-self-start">
+              <h1 className="text-3xl sm:text-5xl lg:text-[2.65rem] xl:text-[3.2rem] font-black tracking-tight text-white leading-[1.08] [perspective:800px]">
+                <SplitWords text="IskoLayan:" />{" "}
+                <SplitWords
+                  text="Palayan City Scholarship Management System"
+                  className="text-[#EDDA5E]"
                 />
+              </h1>
+
+              <p className="gsap-hero-subtitle text-sm sm:text-base text-white/85 mt-3.5 leading-relaxed max-w-md font-normal">
+                Empowering Palayan City scholars through transparent financial
+                aid tracking, academic continuity, and partner-institution
+                coordination.
+              </p>
+
+              <div className="gsap-hero-cta mt-6 flex flex-wrap items-center gap-3">
+                <Button
+                  size="lg"
+                  onClick={() => scrollToSection("statistics")}
+                  className="h-11 px-6 rounded-full bg-[#587529] hover:bg-[#496221] text-white font-semibold shadow-lg shadow-black/25 gap-2 border border-white/15"
+                >
+                  <span>View Public Statistics</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </Button>
               </div>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-foreground mb-4 leading-[1.12] [perspective:800px]">
-              <SplitWords text="IskoLayan:" />{" "}
-              <SplitWords
-                text="Palayan City Scholarship Management System"
-                className="text-brand"
-              />
-            </h1>
-
-            <p className="gsap-hero-subtitle text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
-              Empowering Palayan City scholars through transparent financial aid
-              tracking, academic performance monitoring, and partner-institution
-              coordination.
-            </p>
-
-            <div className="gsap-hero-cta flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => scrollToSection("statistics")}
-                className="h-11 px-7 text-sm sm:text-base rounded-xl w-full sm:w-auto"
-              >
-                <span>View Public Statistics</span>
-              </Button>
-            </div>
-
-            {/* Landing Feature Pillars */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-              <Card className="gsap-hero-pillar glass-card-hover">
-                <CardContent className="p-5">
-                  <h3 className="text-sm font-bold text-foreground">
-                    Live Public Transparency
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                    Aggregate scholarship counts, school distributions, and
-                    disbursement progress updated directly from Supabase.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="gsap-hero-pillar glass-card-hover">
-                <CardContent className="p-5">
-                  <h3 className="text-sm font-bold text-foreground">
-                    Academic Continuity
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                    Multi-semester grade history tracking across GWA and
-                    percentage scales for all partner colleges.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="gsap-hero-pillar glass-card-hover">
-                <CardContent className="p-5">
-                  <h3 className="text-sm font-bold text-foreground">
-                    Privacy-First Records
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                    Individual scholar profiles stay protected behind
-                    authenticated LGU administrator login.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Powered by ICT Division & NPC Seal Compliance Strip */}
-            <div className="gsap-hero-compliance mt-7 inline-flex flex-wrap items-center justify-center gap-4 sm:gap-6 px-5 py-2.5 rounded-2xl bg-white/80 backdrop-blur-md border border-border/90 shadow-[0_6px_24px_rgba(88,117,41,0.08)]">
+            {/* Middle-Bottom ICT Division & NPC Compliance Pill (dead-center of hero) */}
+            <div className="gsap-hero-compliance inline-flex flex-wrap items-center justify-center gap-3.5 sm:gap-4 px-4 py-3 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white shadow-xl self-center lg:self-end lg:justify-self-center flex-shrink-0">
               <div className="flex items-center gap-2.5 text-left">
-                <img
-                  src="/logo/ict-logo.png"
-                  alt="Palayan City ICT Division Logo"
-                  className="h-8 w-8 object-contain flex-shrink-0"
-                />
+                <div className="h-8 w-8 rounded-lg bg-white/95 p-1 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <img
+                    src="/logo/ict-logo.png"
+                    alt="Palayan City ICT Division Logo"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <div>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block leading-none mb-0.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-white/75 block leading-none mb-0.5">
                     Powered by
                   </span>
-                  <span className="text-xs font-bold text-foreground block leading-tight">
+                  <span className="text-xs font-bold text-white block leading-tight">
                     Palayan City ICT Division
                   </span>
                 </div>
               </div>
 
-              <div className="hidden sm:block h-6 w-px bg-border" />
+              <div className="hidden sm:block h-7 w-px bg-white/25" />
 
               <div className="flex items-center gap-2.5 text-left">
-                <img
-                  src="/logo/npc.png"
-                  alt="National Privacy Commission Seal"
-                  className="h-8 w-auto object-contain flex-shrink-0"
-                />
+                <div className="h-8 rounded-lg bg-white/95 px-1.5 py-1 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <img
+                    src="/logo/npc.png"
+                    alt="National Privacy Commission Seal"
+                    className="h-full w-auto object-contain"
+                  />
+                </div>
                 <div>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block leading-none mb-0.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-white/75 block leading-none mb-0.5">
                     Data Privacy Compliance
                   </span>
-                  <span className="text-xs font-bold text-foreground block leading-tight">
-                    National Privacy Commission (RA 10173)
+                  <span className="text-xs font-bold text-white block leading-tight">
+                    NPC Seal (RA 10173)
                   </span>
                 </div>
               </div>
+            </div>
+
+            <div className="self-start lg:self-end lg:justify-self-end flex-shrink-0">
+              {dashboardData?.available && (
+                <div className="gsap-hero-float-card inline-flex items-center gap-5 px-5 py-3.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white shadow-xl">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-white/75 font-semibold block">
+                      Registered Scholars
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight text-[#EDDA5E]">
+                      {(dashboardData.total_scholars || 0).toLocaleString(
+                        "en-PH",
+                      )}
+                    </span>
+                  </div>
+                  <div className="h-9 w-px bg-white/25" />
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-white/75 font-semibold block">
+                      Partner Schools
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight text-white">
+                      {(dashboardData.total_schools || 0).toLocaleString(
+                        "en-PH",
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
+      {/* Flowing Gradient Green Wave Backdrop + Frosted Glass Analytics Section */}
+      <div className="relative w-full overflow-hidden flex-grow flex flex-col">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-0 z-0 overflow-hidden blur-[28px] sm:blur-[36px]"
+        >
+          {/* Soft Ambient Green-Gold Atmospheric Glows */}
+          <div className="absolute -top-32 -left-32 w-[620px] h-[620px] rounded-full bg-[#71951E]/18 blur-[120px]" />
+          <div className="absolute top-[32%] -right-32 w-[680px] h-[680px] rounded-full bg-[#587529]/16 blur-[130px]" />
+          <div className="absolute -bottom-32 left-[18%] w-[640px] h-[520px] rounded-full bg-[#EDDA5E]/22 blur-[120px]" />
+
+          {/* Huge Upper Flowing Soft Olive Wave (200% seamless loop) */}
+          <svg
+            viewBox="0 0 2880 720"
+            preserveAspectRatio="none"
+            className="animate-wave-slow absolute -top-12 left-0 w-[200%] h-[620px] sm:h-[780px]"
+          >
+            <defs>
+              <linearGradient id="waveGreenTopSoft" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#88AA3B" stopOpacity="0.06" />
+                <stop offset="35%" stopColor="#71951E" stopOpacity="0.22" />
+                <stop offset="70%" stopColor="#587529" stopOpacity="0.16" />
+                <stop offset="100%" stopColor="#EDDA5E" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,260 C360,100 720,420 1080,260 C1260,180 1350,220 1440,260 C1800,100 2160,420 2520,260 C2700,180 2790,220 2880,260 L2880,580 C2520,700 2160,440 1800,580 C1620,650 1530,615 1440,580 C1080,700 720,440 360,580 C180,650 90,615 0,580 Z"
+              fill="url(#waveGreenTopSoft)"
+            />
+          </svg>
+
+          {/* Upper Counter-Flowing Sage-Butter Ribbon */}
+          <svg
+            viewBox="0 0 2880 720"
+            preserveAspectRatio="none"
+            className="animate-wave-reverse absolute top-[6%] left-0 w-[200%] h-[580px] sm:h-[720px]"
+          >
+            <defs>
+              <linearGradient id="waveSageCounter" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#94B547" stopOpacity="0.16" />
+                <stop offset="50%" stopColor="#71951E" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#EDDA5E" stopOpacity="0.14" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,320 C360,480 720,160 1080,320 C1260,400 1350,360 1440,320 C1800,480 2160,160 2520,320 C2700,400 2790,360 2880,320 L2880,640 C2520,520 2160,720 1800,600 C1620,540 1530,590 1440,640 C1080,520 720,720 360,600 C180,540 90,590 0,640 Z"
+              fill="url(#waveSageCounter)"
+            />
+          </svg>
+
+          {/* Huge Mid-Page Sweeping Emerald Wave behind Charts & Schools */}
+          <svg
+            viewBox="0 0 2880 800"
+            preserveAspectRatio="none"
+            className="animate-wave-slow absolute top-[30%] left-0 w-[200%] h-[680px] sm:h-[860px]"
+          >
+            <defs>
+              <linearGradient id="waveGreenMidSoft" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#71951E" stopOpacity="0.04" />
+                <stop offset="40%" stopColor="#587529" stopOpacity="0.22" />
+                <stop offset="75%" stopColor="#8DB03D" stopOpacity="0.16" />
+                <stop offset="100%" stopColor="#F4BE38" stopOpacity="0.03" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,280 C360,100 720,460 1080,280 C1260,190 1350,235 1440,280 C1800,100 2160,460 2520,280 C2700,190 2790,235 2880,280 L2880,660 C2520,780 2160,500 1800,660 C1620,740 1530,700 1440,660 C1080,780 720,500 360,660 C180,740 90,700 0,660 Z"
+              fill="url(#waveGreenMidSoft)"
+            />
+          </svg>
+
+          {/* Lower Soft Olive-Gold Wave behind Graduates & Footer */}
+          <svg
+            viewBox="0 0 2880 680"
+            preserveAspectRatio="none"
+            className="animate-wave-reverse absolute -bottom-10 left-0 w-[200%] h-[560px] sm:h-[720px]"
+          >
+            <defs>
+              <linearGradient id="waveGreenBottomSoft" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#71951E" stopOpacity="0.02" />
+                <stop offset="45%" stopColor="#587529" stopOpacity="0.2" />
+                <stop offset="80%" stopColor="#8DB03D" stopOpacity="0.16" />
+                <stop offset="100%" stopColor="#EDDA5E" stopOpacity="0.14" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,220 C360,80 720,380 1080,220 C1260,140 1350,180 1440,220 C1800,80 2160,380 2520,220 C2700,140 2790,180 2880,220 L2880,680 L0,680 Z"
+              fill="url(#waveGreenBottomSoft)"
+            />
+          </svg>
+        </div>
+
       {/* Public Analytics Section */}
       <main
         id="statistics"
-        className="flex-grow w-full px-4 sm:px-6 lg:px-10 py-10 space-y-8"
+        className="relative z-10 flex-grow w-full px-4 sm:px-6 lg:px-10 py-10 space-y-8 scroll-mt-16"
       >
         {dataNotAvailable && (
           <Card className="border-highlight/70 bg-highlight/20">
@@ -719,7 +902,7 @@ const LandingPage = () => {
           <>
             {/* Top 4 KPI Cards */}
             <div className="gsap-kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <Card className="gsap-kpi-card glass-card-hover border-t-4 border-t-[#587529]">
+              <Card className="gsap-kpi-card glass-frosted-card border-t-4 border-t-[#587529]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/25 flex items-center justify-center">
@@ -742,7 +925,7 @@ const LandingPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="gsap-kpi-card glass-card-hover border-t-4 border-t-[#71951E]">
+              <Card className="gsap-kpi-card glass-frosted-card border-t-4 border-t-[#71951E]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 rounded-xl bg-brand text-brand-foreground flex items-center justify-center">
@@ -777,7 +960,7 @@ const LandingPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="gsap-kpi-card glass-card-hover border-t-4 border-t-[#F4BE38]">
+              <Card className="gsap-kpi-card glass-frosted-card border-t-4 border-t-[#F4BE38]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 rounded-xl bg-highlight text-highlight-foreground flex items-center justify-center">
@@ -812,7 +995,7 @@ const LandingPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="gsap-kpi-card glass-card-hover border-t-4 border-t-[#EDDA5E]">
+              <Card className="gsap-kpi-card glass-frosted-card border-t-4 border-t-[#EDDA5E]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 rounded-xl bg-brand-soft/60 border border-highlight/40 flex items-center justify-center">
@@ -838,7 +1021,7 @@ const LandingPage = () => {
 
             {/* Demographic & Equity Breakdown Row */}
             <div className="gsap-demo-grid grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <Card className="gsap-demo-card glass-card-hover">
+              <Card className="gsap-demo-card glass-frosted-card">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -885,7 +1068,7 @@ const LandingPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="gsap-demo-card glass-card-hover">
+              <Card className="gsap-demo-card glass-frosted-card">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -932,7 +1115,7 @@ const LandingPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="gsap-demo-card glass-card-hover">
+              <Card className="gsap-demo-card glass-frosted-card">
                 <CardContent className="p-6 space-y-3.5">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1056,7 +1239,7 @@ const LandingPage = () => {
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                   {/* Left: Tremor-Style Ranked School BarList */}
-                  <Card className="gsap-schools-card lg:col-span-6 glass-card-hover flex flex-col">
+                  <Card className="gsap-schools-card lg:col-span-6 glass-frosted-card flex flex-col">
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <div className="flex items-start justify-between gap-3 mb-5">
                         <div>
@@ -1135,7 +1318,7 @@ const LandingPage = () => {
 
                   {/* Right Column: Shadcn Year Level Bar Chart + Center-Label Donut */}
                   <div className="gsap-charts-col lg:col-span-6 flex flex-col gap-6">
-                    <Card className="gsap-chart-card glass-card-hover">
+                    <Card className="gsap-chart-card glass-frosted-card">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between gap-3 mb-4">
                           <div>
@@ -1195,7 +1378,7 @@ const LandingPage = () => {
                       </CardContent>
                     </Card>
 
-                    <Card className="gsap-chart-card glass-card-hover flex-1">
+                    <Card className="gsap-chart-card glass-frosted-card flex-1">
                       <CardContent className="p-6 h-full flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div>
@@ -1332,7 +1515,7 @@ const LandingPage = () => {
         )}
 
         {/* Graduates Section */}
-        <Card id="graduates">
+        <Card id="graduates" className="glass-frosted-card scroll-mt-24">
           <CardContent className="p-6 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
@@ -1427,7 +1610,7 @@ const LandingPage = () => {
                       return (
                         <div
                           key={school.school_name || index}
-                          className="gsap-grad-card p-4 rounded-xl bg-white/90 border border-border hover:border-brand/40 transition-colors shadow-sm flex flex-col justify-between gap-3"
+                          className="gsap-grad-card p-4 rounded-xl bg-white/55 backdrop-blur-xl border border-white/80 hover:border-brand/40 hover:bg-white/70 transition-all shadow-[0_6px_22px_rgba(88,117,41,0.08)] flex flex-col justify-between gap-3"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-2.5 min-w-0">
@@ -1480,7 +1663,7 @@ const LandingPage = () => {
         </Card>
       </main>
 
-      <footer className="gsap-footer border-t border-border py-7 bg-white/90 backdrop-blur-md">
+      <footer className="gsap-footer relative z-10 border-t border-white/75 py-7 bg-white/55 backdrop-blur-2xl">
         <div className="w-full px-4 sm:px-6 lg:px-10 space-y-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3.5">
@@ -1535,6 +1718,7 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+      </div>
 
       {/* Custom Admin Login Prompt Modal */}
       <AdminLoginDialog

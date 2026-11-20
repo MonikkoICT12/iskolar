@@ -21,7 +21,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 import {
   AdminModuleSkeleton,
   AdminShellSkeleton,
-  LandingPageSkeleton,
 } from './components/SkeletonScreens'
 import { cleanupLegacyStorage } from './utils/storageCleanup'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -295,7 +294,9 @@ function App() {
     const isAdminRoute =
       typeof window !== 'undefined' &&
       window.location.pathname.startsWith('/admin')
-    return isAdminRoute ? <AdminShellSkeleton /> : <LandingPageSkeleton />
+    if (isAdminRoute) {
+      return <AdminShellSkeleton />
+    }
   }
 
   return (

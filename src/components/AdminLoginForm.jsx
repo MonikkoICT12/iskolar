@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from '@/components/ui/sonner'
 import { Input } from '@/components/ui/input'
@@ -35,7 +35,8 @@ function writeThrottleState(state) {
   }
 }
 
-const AdminLoginForm = ({ onSuccess, idPrefix = 'login' }) => {
+const AdminLoginForm = ({ onSuccess, idPrefix = 'login', variant = 'default' }) => {
+  const isGlass = variant === 'glass'
   const navigate = useNavigate()
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
@@ -136,16 +137,41 @@ const AdminLoginForm = ({ onSuccess, idPrefix = 'login' }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="p-3 rounded-xl bg-red-50/90 border border-red-200 flex items-start gap-2.5 animate-in fade-in duration-200">
-          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs font-medium text-red-700">{error}</p>
+        <div
+          className={`p-3 rounded-xl border flex items-start gap-2.5 animate-in fade-in duration-200 ${
+            isGlass
+              ? 'bg-red-500/15 border-red-400/35 text-red-100'
+              : 'bg-red-50/90 border-red-200'
+          }`}
+        >
+          <AlertCircle
+            className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+              isGlass ? 'text-red-300' : 'text-red-600'
+            }`}
+          />
+          <p
+            className={`text-xs font-medium ${
+              isGlass ? 'text-red-100' : 'text-red-700'
+            }`}
+          >
+            {error}
+          </p>
         </div>
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-email`}>Admin Email</Label>
+        <Label
+          htmlFor={`${idPrefix}-email`}
+          className={isGlass ? 'text-xs font-semibold text-white/85 tracking-wide' : ''}
+        >
+          Admin Email
+        </Label>
         <div className="relative">
-          <Mail className="w-4 h-4 text-brand absolute left-3 top-1/2 z-10 -translate-y-1/2 pointer-events-none" />
+          <Mail
+            className={`w-4 h-4 absolute left-3.5 top-1/2 z-10 -translate-y-1/2 pointer-events-none ${
+              isGlass ? 'text-[#EDDA5E]/85' : 'text-brand'
+            }`}
+          />
           <Input
             id={`${idPrefix}-email`}
             type="email"
@@ -156,16 +182,29 @@ const AdminLoginForm = ({ onSuccess, idPrefix = 'login' }) => {
             disabled={loading || isLocked}
             autoFocus
             maxLength={254}
-            className="pl-9"
+            className={
+              isGlass
+                ? 'h-11 pl-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/45 hover:bg-white/[0.14] focus-visible:bg-white/[0.16] focus-visible:border-[#EDDA5E]/75 shadow-inner'
+                : 'pl-9'
+            }
             placeholder="admin@palayancity.gov.ph"
           />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-password`}>Password</Label>
+        <Label
+          htmlFor={`${idPrefix}-password`}
+          className={isGlass ? 'text-xs font-semibold text-white/85 tracking-wide' : ''}
+        >
+          Password
+        </Label>
         <div className="relative">
-          <Lock className="w-4 h-4 text-brand absolute left-3 top-1/2 z-10 -translate-y-1/2 pointer-events-none" />
+          <Lock
+            className={`w-4 h-4 absolute left-3.5 top-1/2 z-10 -translate-y-1/2 pointer-events-none ${
+              isGlass ? 'text-[#EDDA5E]/85' : 'text-brand'
+            }`}
+          />
           <Input
             id={`${idPrefix}-password`}
             type={showPassword ? 'text' : 'password'}
@@ -175,7 +214,11 @@ const AdminLoginForm = ({ onSuccess, idPrefix = 'login' }) => {
             required
             disabled={loading || isLocked}
             maxLength={128}
-            className="pl-9 pr-10"
+            className={
+              isGlass
+                ? 'h-11 pl-10 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/45 hover:bg-white/[0.14] focus-visible:bg-white/[0.16] focus-visible:border-[#EDDA5E]/75 shadow-inner'
+                : 'pl-9 pr-10'
+            }
             placeholder="Enter your password"
           />
           <Button
@@ -184,7 +227,11 @@ const AdminLoginForm = ({ onSuccess, idPrefix = 'login' }) => {
             size="icon"
             onClick={() => setShowPassword(!showPassword)}
             disabled={loading || isLocked}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+            className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg ${
+              isGlass
+                ? 'text-white/65 hover:text-white hover:bg-white/10'
+                : 'text-muted-foreground'
+            }`}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
@@ -200,13 +247,20 @@ const AdminLoginForm = ({ onSuccess, idPrefix = 'login' }) => {
         type="submit"
         variant="gradient"
         disabled={loading || isLocked}
-        className="w-full h-10 rounded-xl mt-2"
+        className={
+          isGlass
+            ? 'w-full h-11 rounded-xl mt-3 bg-gradient-to-r from-[#587529] to-[#71951E] hover:from-[#64842D] hover:to-[#7FA823] text-white font-semibold shadow-[0_12px_30px_rgba(88,117,41,0.45)] border border-white/20 gap-2'
+            : 'w-full h-10 rounded-xl mt-2'
+        }
       >
-        {isLocked
-          ? `Locked (${remainingSeconds}s)`
-          : loading
-            ? 'Signing in...'
-            : 'Sign In to Dashboard'}
+        <span>
+          {isLocked
+            ? `Locked (${remainingSeconds}s)`
+            : loading
+              ? 'Signing in...'
+              : 'Sign In to Dashboard'}
+        </span>
+        {!loading && !isLocked && <ArrowRight className="w-4 h-4" />}
       </Button>
     </form>
   )
